@@ -94,7 +94,7 @@ export function OnboardingSlide2({ onNext }: Props) {
                 onClick={() => setAssumeHealthy(!assumeHealthy)}
                 className={`w-11 h-6 rounded-full transition-colors relative ${assumeHealthy ? 'bg-sky-pilot' : 'bg-gray-300'}`}
               >
-                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${assumeHealthy ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                <span className={`absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${assumeHealthy ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
               </button>
             </div>
             <div>
