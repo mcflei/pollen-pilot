@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(node -e \"const r = require\\('./node_modules/recharts/package.json'\\); console.log\\('recharts:', r.version\\)\")",
+      "Bash(node -e \"const f = require\\('./node_modules/fuse.js/package.json'\\); console.log\\('fuse.js:', f.version\\)\")",
+      "Bash(npm list *)",
+      "Bash(node -e \"const wp=require\\('web-push'\\);const k=wp.generateVAPIDKeys\\(\\);console.log\\('PUBLIC='+k.publicKey+'\\\\nPRIVATE='+k.privateKey\\);\")",
+      "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\Max\\\\Documents\\\\PollenPilot\\\\supabase\\\\functions\\\\send-reminders\")",
+      "Bash(Out-Null)"
+    ]
+  }
+}
