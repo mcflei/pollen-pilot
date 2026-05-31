@@ -43,6 +43,7 @@ interface AppState {
   isLoading: boolean;
   onboardingDone: boolean;
   checkInSubmittedToday: boolean;
+  lastCheckInIllnessFlagged: boolean;
 
   initApp: () => Promise<void>;
   completeOnboarding: (profile: UserProfile) => void;
@@ -53,6 +54,26 @@ interface AppState {
   refreshPollenData: () => Promise<void>;
   resetData: () => void;
   signOut: () => Promise<void>;
+}
+
+function detectProbableCold(
+  severity: number,
+  pollenData: PollenSnapshot | null,
+  hoursOutside: number | null,
+): boolean {
+  if (severity < 4) return false;
+  if (!pollenData) return false;
+
+  const avgPollen = (pollenData.grass_index + pollenData.tree_index + pollenData.weed_index) / 3;
+  const outdoor = hoursOutside ?? 0;
+
+  // Very low pollen + any notable symptoms = probably not allergies
+  if (avgPollen <= 1 && severity >= 4) return true;
+
+  // Low pollen + little outdoor time + moderate-high severity
+  if (avgPollen <= 2 && outdoor <= 0.5 && severity >= 5) return true;
+
+  return false;
 }
 
 function autoAssumeHealthyDays(
@@ -105,6 +126,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isLoading: false,
   onboardingDone: false,
   checkInSubmittedToday: false,
+  lastCheckInIllnessFlagged: false,
 
   initApp: async () => {
     set({ isLoading: true });
@@ -192,19 +214,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     data: Omit<CheckIn, 'id' | 'timestamp' | 'entry_type' | 'confidence_weight' | 'pollen_snapshot'>
   ) => {
     const { pollenData, checkIns } = get();
+    const illnessFlagged = detectProbableCold(data.severity, pollenData, data.hours_outside);
     const checkIn: CheckIn = {
       ...data,
       id: uuidv4(),
       timestamp: new Date().toISOString(),
       entry_type: 'manual',
-      // Illness days get near-zero weight — they shouldn't train the allergy model
-      confidence_weight: data.possible_illness ? 0.05 : 1.0,
+      possible_illness: illnessFlagged,
+      // Auto-detected illness days get near-zero weight — they shouldn't train the allergy model
+      confidence_weight: illnessFlagged ? 0.05 : 1.0,
       pollen_snapshot: pollenData ?? null,
     };
 
     appendCheckIn(checkIn);
     const allCheckIns = [...checkIns, checkIn];
-    set({ checkIns: allCheckIns, checkInSubmittedToday: true });
+    set({ checkIns: allCheckIns, checkInSubmittedToday: true, lastCheckInIllnessFlagged: illnessFlagged });
 
     pushCheckIn(checkIn).catch(() => {});
 

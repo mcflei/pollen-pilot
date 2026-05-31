@@ -32,6 +32,7 @@ export function Dashboard() {
   const insights = useInsights();
   const forecast = useAppStore(s => s.forecast);
   const profile = useAppStore(s => s.profile);
+  const illnessFlagged = useAppStore(s => s.lastCheckInIllnessFlagged);
   const [showCheckIn, setShowCheckIn] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(false);
 
@@ -80,12 +81,25 @@ export function Dashboard() {
 
       {/* Check-in CTA */}
       {checkInSubmittedToday ? (
-        <div className="mx-4 bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-          <span className="text-2xl">✅</span>
-          <div>
-            <div className="font-semibold text-green-800">Check-in logged</div>
-            <div className="text-sm text-green-600">Your data has been recorded for today.</div>
+        <div className="mx-4 space-y-2">
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+            <span className="text-2xl">✅</span>
+            <div>
+              <div className="font-semibold text-green-800">Check-in logged</div>
+              <div className="text-sm text-green-600">Your data has been recorded for today.</div>
+            </div>
           </div>
+          {illnessFlagged && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+              <span className="text-xl">🤧</span>
+              <div>
+                <div className="font-semibold text-amber-800 text-sm">Possible cold or illness detected</div>
+                <div className="text-xs text-amber-700 mt-1">
+                  Pollen is very low but your symptoms are elevated. This check-in has been weighted near-zero in your allergy model so it doesn't skew your personal risk scores.
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="mx-4">

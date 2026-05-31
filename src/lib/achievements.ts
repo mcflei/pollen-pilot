@@ -42,7 +42,7 @@ export function computeAchievements(checkIns: CheckIn[]): Achievement[] {
     { id: 'medication_logged',icon: '💊', name: 'Medicated',           description: 'Logged a medication during a check-in' },
     { id: 'survived_high',    icon: '⛈️', name: 'Storm Rider',         description: 'Checked in on a high-pollen day with severity ≤ 4' },
     { id: 'clear_day',        icon: '☀️', name: 'Clear Skies',         description: 'Checked in with severity 0–1 on a good pollen day' },
-    { id: 'illness_logged',   icon: '🤧', name: 'Honest Pilot',        description: 'Flagged a check-in as possible illness' },
+    { id: 'illness_detected', icon: '🤧', name: 'Not Allergies',        description: 'Had a high-symptom day auto-detected as a possible cold — kept your model clean' },
   ];
 
   function isUnlocked(id: string): boolean {
@@ -63,7 +63,7 @@ export function computeAchievements(checkIns: CheckIn[]): Achievement[] {
         const snap = c.pollen_snapshot;
         return c.severity <= 1 && snap && (snap.grass_index + snap.tree_index) / 2 <= 2;
       });
-      case 'illness_logged':    return manual.some(c => c.possible_illness === true);
+      case 'illness_detected':  return manual.some(c => c.possible_illness === true);
       default: return false;
     }
   }
