@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
+import { useDarkMode } from '@/hooks/useDarkMode';
 import { Nav } from '@/components/layout/Nav';
 import { TabBar } from '@/components/layout/TabBar';
 import { AuthScreen } from '@/components/auth/AuthScreen';
@@ -12,6 +13,7 @@ import { InsightsPage } from '@/components/insights/InsightsPage';
 import { SettingsPage } from '@/components/settings/SettingsPage';
 
 export function App() {
+  useDarkMode(); // Apply dark class immediately on every mount, not just when Settings tab is visited
   const initApp = useAppStore(s => s.initApp);
   const onboardingDone = useAppStore(s => s.onboardingDone);
   const isLoading = useAppStore(s => s.isLoading);

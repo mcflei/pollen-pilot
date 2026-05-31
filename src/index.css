@@ -51,6 +51,10 @@ html.dark .border-blue-200 { border-color: #1e3a8a; }
 /* Dividers */
 html.dark .divide-gray-100 > * + * { border-color: #374151; }
 
+/* Opacity variants of gray-50 (e.g. bg-gray-50/50) */
+html.dark .bg-gray-50\/50 { background-color: rgba(17, 24, 39, 0.5); }
+html.dark .bg-gray-50\/30 { background-color: rgba(17, 24, 39, 0.3); }
+
 /* Inputs */
 html.dark input:not([type="range"]),
 html.dark textarea,
@@ -58,6 +62,12 @@ html.dark select {
   background-color: #374151;
   color: #f9fafb;
   border-color: #4b5563;
+}
+
+/* Native time/date pickers render in dark mode */
+html.dark input[type="time"],
+html.dark input[type="date"] {
+  color-scheme: dark;
 }
 
 /* Shadows become less prominent in dark */

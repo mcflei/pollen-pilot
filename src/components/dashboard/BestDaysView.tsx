@@ -25,6 +25,7 @@ export function BestDaysView({ forecast }: Props) {
         {sorted.map((day, rank) => {
           const d = new Date(day.date + 'T12:00:00');
           const dayName = DAY_NAMES[d.getDay()];
+          const monthDay = `${d.getMonth() + 1}/${d.getDate()}`;
           const cfg = CATEGORY_CONFIG[day.category];
 
           return (
@@ -33,7 +34,7 @@ export function BestDaysView({ forecast }: Props) {
               <span className="text-lg leading-none">{cfg.emoji}</span>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-gray-800">{dayName}</span>
+                  <span className="text-sm font-medium text-gray-800">{dayName} <span className="text-gray-400 font-normal">{monthDay}</span></span>
                   <span className={`text-xs font-semibold ${cfg.text}`}>{cfg.label}</span>
                 </div>
                 <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
