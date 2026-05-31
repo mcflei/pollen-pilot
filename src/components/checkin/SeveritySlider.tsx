@@ -29,18 +29,8 @@ export function SeveritySlider({ value, onChange }: Props) {
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Overall severity</label>
-      <div className="flex items-center gap-3">
-        <input
-          type="range"
-          min={0}
-          max={10}
-          step={1}
-          value={value}
-          onChange={e => onChange(Number(e.target.value))}
-          className="flex-1 h-2 rounded-full appearance-none cursor-pointer"
-          style={{ accentColor: color }}
-        />
+      <div className="flex items-center justify-between mb-3">
+        <label className="text-sm font-medium text-gray-700">Overall severity</label>
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
           style={{ backgroundColor: color }}
@@ -48,8 +38,31 @@ export function SeveritySlider({ value, onChange }: Props) {
           {value}
         </div>
       </div>
-      <div className="text-center text-sm mt-1" style={{ color }}>
-        {LABELS[value]}
+
+      <div
+        className="rounded-xl px-4 pt-3 pb-4 mb-1"
+        style={{ backgroundColor: `${color}18` }}
+      >
+        <div className="text-center font-medium text-sm mb-3" style={{ color }}>
+          {LABELS[value]}
+        </div>
+        <div className="relative">
+          <div className="flex justify-between text-xs text-gray-400 mb-1 px-0.5">
+            <span>0</span>
+            <span className="text-gray-400 text-xs italic">slide to adjust</span>
+            <span>10</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={10}
+            step={1}
+            value={value}
+            onChange={e => onChange(Number(e.target.value))}
+            className="w-full h-3 rounded-full appearance-none cursor-pointer"
+            style={{ accentColor: color }}
+          />
+        </div>
       </div>
     </div>
   );
