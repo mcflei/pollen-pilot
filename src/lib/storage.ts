@@ -68,6 +68,11 @@ export function savePollenCache(entry: PollenCacheEntry): void {
   write(KEYS.POLLEN_CACHE, entry);
 }
 
+export function clearPollenCache(): void {
+  localStorage.removeItem(KEYS.POLLEN_CACHE);
+  localStorage.removeItem(KEYS.FORECAST_CACHE);
+}
+
 export function isPollenCacheFresh(): boolean {
   const cache = getPollenCache();
   if (!cache) return false;

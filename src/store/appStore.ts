@@ -14,6 +14,7 @@ import {
   getForecastCache,
   saveForecastCache,
   isForecastCacheFresh,
+  clearPollenCache,
 } from '@/lib/storage';
 import { getPollenData, getMockPollenData, getPollenForecast } from '@/lib/pollenApi';
 import type { ForecastDay } from '@/types';
@@ -265,11 +266,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   refreshPollenData: async () => {
     const { profile } = get();
     const today = todayStr();
+    // Always bypass cache — this is an explicit user-triggered refresh
+    clearPollenCache();
     const snapshot = profile?.location
       ? await getPollenData(profile.location.lat, profile.location.lng, profile.location.city)
       : getMockPollenData(today);
     set({ pollenData: snapshot });
     pushPollenSnapshot(snapshot).catch(() => {});
+    // Also refresh forecast for the new location
+    if (profile?.location) {
+      getPollenForecast(profile.location.lat, profile.location.lng, profile.location.city)
+        .then(forecast => { set({ forecast }); saveForecastCache(forecast); })
+        .catch(() => {});
+    }
     const riskScore = computeRiskScore(get().checkIns, snapshot);
     set({ riskScore });
   },
