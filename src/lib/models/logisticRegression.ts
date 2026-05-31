@@ -1,7 +1,7 @@
 import type { LogisticRegressionModel, TrainSample } from '@/types';
 import { featureToArray } from './featureEngineering';
 
-const FEATURE_COUNT = 29;
+const FEATURE_COUNT = 32;
 const LEARNING_RATE = 0.01;
 const REGULARIZATION = 0.001;
 const ITERATIONS = 500;
@@ -14,7 +14,7 @@ function dotProduct(a: number[], b: number[]): number {
   return a.reduce((sum, ai, i) => sum + ai * b[i], 0);
 }
 
-export function trainLogisticRegression(samples: TrainSample[]): LogisticRegressionModel {
+export function trainLogisticRegression(samples: TrainSample[], maxIterations = ITERATIONS): LogisticRegressionModel {
   if (samples.length === 0) {
     return {
       weights: new Array(FEATURE_COUNT + 1).fill(0),
@@ -27,7 +27,7 @@ export function trainLogisticRegression(samples: TrainSample[]): LogisticRegress
   const weights = new Array(FEATURE_COUNT + 1).fill(0);
   const n = samples.length;
 
-  for (let iter = 0; iter < ITERATIONS; iter++) {
+  for (let iter = 0; iter < maxIterations; iter++) {
     const gradients = new Array(FEATURE_COUNT + 1).fill(0);
 
     for (const sample of samples) {
@@ -49,7 +49,7 @@ export function trainLogisticRegression(samples: TrainSample[]): LogisticRegress
     weights,
     learning_rate: LEARNING_RATE,
     regularization: REGULARIZATION,
-    iterations_trained: ITERATIONS,
+    iterations_trained: maxIterations,
   };
 }
 

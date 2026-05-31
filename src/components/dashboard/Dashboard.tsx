@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAppStore } from '@/store/appStore';
 import { useRiskScore } from '@/hooks/useRiskScore';
 import { usePollenData } from '@/hooks/usePollenData';
 import { useCheckIns } from '@/hooks/useCheckIns';
@@ -8,19 +9,41 @@ import { WeatherStrip } from './WeatherStrip';
 import { PollenRadar } from './PollenRadar';
 import { TriggerMap } from './TriggerMap';
 import { Recommendations } from './Recommendations';
+import { ForecastStrip } from './ForecastStrip';
 import { CheckInModal } from '@/components/checkin/CheckInModal';
+
+const SYMPTOM_LABELS: Record<string, string> = {
+  sneezing: 'Sneezing',
+  itchy_eyes: 'Itchy eyes',
+  congestion: 'Congestion',
+  watery_eyes: 'Watery eyes',
+  coughing: 'Coughing',
+  headache: 'Headache',
+  fatigue: 'Fatigue',
+  throat_irritation: 'Throat irritation',
+};
 
 export function Dashboard() {
   const { riskScore } = useRiskScore();
   const { pollenData } = usePollenData();
   const { manualCheckIns, checkInSubmittedToday } = useCheckIns();
   const insights = useInsights();
+  const forecast = useAppStore(s => s.forecast);
   const [showCheckIn, setShowCheckIn] = useState(false);
+
+  const predictedSymptoms = riskScore?.predicted_symptoms ?? [];
+  const streak = insights.streak_days;
 
   return (
     <div className="pb-6 space-y-5">
-      <div className="px-4 pt-4">
+      <div className="px-4 pt-4 flex items-center justify-between">
         <h1 className="font-lora text-xl font-semibold text-gray-900">Today's flight plan</h1>
+        {streak > 1 && (
+          <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
+            <span className="text-sm">🔥</span>
+            <span className="text-xs font-semibold text-amber-700">{streak} day streak</span>
+          </div>
+        )}
       </div>
 
       {riskScore && (
@@ -30,6 +53,23 @@ export function Dashboard() {
           explanation={riskScore.explanation}
           isPreliminary={riskScore.is_preliminary}
         />
+      )}
+
+      {/* Predicted symptoms */}
+      {predictedSymptoms.length > 0 && (
+        <div className="mx-4">
+          <p className="text-xs text-gray-500 mb-2">Your patterns suggest today may bring:</p>
+          <div className="flex flex-wrap gap-1.5">
+            {predictedSymptoms.map(({ symptom, probability }) => (
+              <span
+                key={symptom}
+                className="text-xs px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 font-medium"
+              >
+                {SYMPTOM_LABELS[symptom]} {Math.round(probability * 100)}%
+              </span>
+            ))}
+          </div>
+        </div>
       )}
 
       {pollenData && <WeatherStrip data={pollenData} />}
@@ -57,6 +97,8 @@ export function Dashboard() {
       )}
 
       {pollenData && <PollenRadar data={pollenData} />}
+
+      {forecast.length > 0 && <ForecastStrip forecast={forecast} />}
 
       <TriggerMap
         associations={insights.trigger_associations}

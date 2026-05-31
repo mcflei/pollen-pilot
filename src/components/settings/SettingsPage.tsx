@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/appStore';
-import { exportAllData, resetAllData } from '@/lib/storage';
+import { exportAllData, exportAllDataJSON, resetAllData } from '@/lib/storage';
 import { reverseGeocode } from '@/lib/pollenApi';
 import { subscribeToPush, unsubscribeFromPush } from '@/lib/notifications';
 import type { UserProfile } from '@/types';
@@ -171,15 +171,24 @@ export function SettingsPage() {
   }
 
   function handleExport() {
-    const json = exportAllData();
+    const url = exportAllData();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pollen-pilot-report-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExported(true);
+  }
+
+  function handleExportJSON() {
+    const json = exportAllDataJSON();
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pollen-pilot-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `pollen-pilot-data-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    setExported(true);
   }
 
   function handleReset() {
@@ -314,11 +323,43 @@ export function SettingsPage() {
         </Row>
       </Section>
 
+      <Section title="Allergen profile">
+        <div className="px-4 py-3 space-y-2">
+          <p className="text-xs text-gray-500">Which pollens do you know you react to? This helps personalize your insights.</p>
+          {(['grass', 'tree', 'weed', 'ragweed', 'mold'] as const).map(allergen => {
+            const checked = profile.allergen_profile?.[allergen] ?? false;
+            const labels: Record<string, string> = {
+              grass: 'Grass pollen', tree: 'Tree pollen', weed: 'Weed pollen',
+              ragweed: 'Ragweed', mold: 'Mold spores',
+            };
+            return (
+              <label key={allergen} className="flex items-center justify-between py-1">
+                <span className="text-sm text-gray-700">{labels[allergen]}</span>
+                <Toggle
+                  checked={checked}
+                  onChange={v => updateProfile({
+                    allergen_profile: { grass: false, tree: false, weed: false, ragweed: false, mold: false, ...profile.allergen_profile, [allergen]: v },
+                  })}
+                />
+              </label>
+            );
+          })}
+        </div>
+      </Section>
+
       <Section title="Data & privacy">
-        <Row label="Export data">
+        <Row label="Doctor report">
           <button onClick={handleExport} className="text-sm text-sky-pilot font-medium">
-            {exported ? 'Downloaded!' : 'Export JSON'}
+            {exported ? 'Downloaded!' : 'Export .txt'}
           </button>
+        </Row>
+        <Row label="Raw data (JSON)">
+          <button onClick={handleExportJSON} className="text-sm text-sky-pilot font-medium">
+            Export JSON
+          </button>
+        </Row>
+        <Row label="Apple Health">
+          <span className="text-xs text-gray-400">Not available on web</span>
         </Row>
         <Row label="Reset all data">
           <button onClick={handleReset} className="text-sm text-red-500 font-medium">

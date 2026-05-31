@@ -12,7 +12,8 @@ import {
   getCachedExplanation,
   getModelWeights,
 } from '@/lib/storage';
-import { getPollenData, getMockPollenData } from '@/lib/pollenApi';
+import { getPollenData, getMockPollenData, getPollenForecast } from '@/lib/pollenApi';
+import type { ForecastDay } from '@/types';
 import { computeRiskScore, selfEvaluate } from '@/lib/models/ensemble';
 import { generateExplanation } from '@/lib/models/explainer';
 import {
@@ -37,6 +38,7 @@ interface AppState {
   profile: UserProfile | null;
   checkIns: CheckIn[];
   pollenData: PollenSnapshot | null;
+  forecast: ForecastDay[];
   riskScore: RiskScore | null;
   isLoading: boolean;
   onboardingDone: boolean;
@@ -98,6 +100,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   profile: null,
   checkIns: [],
   pollenData: null,
+  forecast: [],
   riskScore: null,
   isLoading: false,
   onboardingDone: false,
@@ -145,6 +148,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     set({ pollenData: snapshot });
     pushPollenSnapshot(snapshot).catch(() => {});
+
+    // Fetch 3-day forecast in background
+    if (profile?.location) {
+      getPollenForecast(profile.location.lat, profile.location.lng, profile.location.city)
+        .then(forecast => set({ forecast }))
+        .catch(() => {});
+    }
 
     // 4. Auto-assume healthy days
     let allCheckIns = checkIns;

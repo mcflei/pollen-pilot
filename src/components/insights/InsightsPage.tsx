@@ -1,12 +1,17 @@
 import { useInsights } from '@/hooks/useInsights';
 import { useCheckIns } from '@/hooks/useCheckIns';
+import { useRiskScore } from '@/hooks/useRiskScore';
 import { TriggerMapChart } from './TriggerMapChart';
 import { TrendChart } from './TrendChart';
 import { SymptomSourceCheck } from './SymptomSourceCheck';
+import { CalendarHeatmap } from './CalendarHeatmap';
+import { MedicationEffectivenessSection } from './MedicationEffectivenessSection';
 
 export function InsightsPage() {
   const insights = useInsights();
   const { checkIns, manualCheckIns } = useCheckIns();
+  const { riskScore } = useRiskScore();
+  const medEffectiveness = riskScore?.medication_effectiveness ?? [];
 
   return (
     <div className="pb-6 space-y-5">
@@ -19,7 +24,7 @@ export function InsightsPage() {
       <div className="mx-4 grid grid-cols-3 gap-2">
         {[
           { label: 'Check-ins', value: insights.manual_checkin_count },
-          { label: 'Auto-assumed', value: insights.auto_assumed_count },
+          { label: 'Streak', value: `${insights.streak_days}d` },
           { label: 'Trigger confidence', value: `${insights.trigger_confidence_pct}%` },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 text-center">
@@ -27,6 +32,14 @@ export function InsightsPage() {
             <div className="text-xs text-gray-500">{s.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* Calendar heatmap */}
+      <div className="mx-4">
+        <h3 className="font-semibold text-gray-900 mb-3">60-day history</h3>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <CalendarHeatmap checkIns={checkIns} />
+        </div>
       </div>
 
       {manualCheckIns.length < 7 && (
@@ -53,6 +66,13 @@ export function InsightsPage() {
         <h3 className="font-semibold text-gray-900 mb-3">Symptom & pollen trend (14 days)</h3>
         <TrendChart checkIns={checkIns} />
       </div>
+
+      {/* Medication effectiveness */}
+      {medEffectiveness.length > 0 && (
+        <div className="mx-4">
+          <MedicationEffectivenessSection data={medEffectiveness} />
+        </div>
+      )}
 
       {/* Lag detection */}
       {insights.lag_pattern_detected && (

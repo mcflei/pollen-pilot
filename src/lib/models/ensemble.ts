@@ -1,8 +1,11 @@
 import type {
   CheckIn,
+  MedicationCategory,
+  MedicationEffectiveness,
   ModelWeights,
   RiskCategory,
   RiskScore,
+  SymptomKey,
   TrainSample,
   PollenSnapshot,
 } from '@/types';
@@ -24,6 +27,21 @@ import {
 
 const MIN_CHECKINS_FOR_MODEL = 7;
 const EVAL_HOLDOUT = 5;
+const SYMPTOM_ITERATIONS = 200;
+
+const SYMPTOMS: SymptomKey[] = [
+  'sneezing', 'itchy_eyes', 'congestion', 'watery_eyes',
+  'coughing', 'headache', 'fatigue', 'throat_irritation',
+];
+
+const MEDICATION_DISPLAY: Partial<Record<MedicationCategory, string>> = {
+  oral_antihistamine: 'Oral antihistamine',
+  nasal_corticosteroid: 'Nasal corticosteroid',
+  nasal_antihistamine: 'Nasal antihistamine',
+  decongestant: 'Decongestant',
+  leukotriene_modifier: 'Leukotriene modifier',
+  combination: 'Combination (e.g. Claritin-D)',
+};
 
 const DEFAULT_WEIGHTS: ModelWeights = {
   logistic_regression: 0.333,
@@ -56,45 +74,131 @@ function pollenOnlyScore(snapshot: PollenSnapshot): number {
   return Math.round(Math.min(100, avg * 20));
 }
 
-function buildTrainSamples(checkIns: CheckIn[]): { samples: TrainSample[]; checkins: CheckIn[] } {
+// ── Personalization helpers ──────────────────────────────────────────────────
+
+function computePersonalBaseline(checkIns: CheckIn[]): number {
+  const manual = checkIns.filter(c => c.entry_type === 'manual').slice(-30);
+  if (manual.length === 0) return 0.5;
+  return manual.reduce((s, c) => s + c.severity, 0) / manual.length / 10;
+}
+
+function computeDaysIntoSeason(checkIns: CheckIn[]): number {
+  const thisYear = new Date().getFullYear();
+  const highPollen = checkIns.filter(c => {
+    if (new Date(c.timestamp).getFullYear() !== thisYear) return false;
+    const snap = c.pollen_snapshot;
+    return snap && (snap.grass_index + snap.tree_index) / 2 > 2;
+  });
+  if (highPollen.length === 0) return 0;
+  const firstHighMs = Math.min(...highPollen.map(c => new Date(c.timestamp).getTime()));
+  return Math.min(1, (Date.now() - firstHighMs) / (180 * 24 * 60 * 60 * 1000));
+}
+
+// ── Training data builder ────────────────────────────────────────────────────
+
+function buildTrainSamples(
+  checkIns: CheckIn[],
+  personalBaseline: number,
+  daysIntoSeason: number,
+): { samples: TrainSample[]; checkins: CheckIn[] } {
   const samples: TrainSample[] = [];
   const usedCheckins: CheckIn[] = [];
 
-  for (let i = 0; i < checkIns.length; i++) {
-    const c = checkIns[i];
+  for (const c of checkIns) {
     if (!c.pollen_snapshot) continue;
-
     const fromDate = new Date(c.timestamp).toISOString().slice(0, 10);
-    const histSnapshots = getSnapshotsForPastDays(fromDate, 5);
-    const features = buildFeatureVector(c, histSnapshots);
-
-    samples.push({
-      features,
-      target: c.severity / 10,
-      weight: c.confidence_weight,
-    });
+    const hist = getSnapshotsForPastDays(fromDate, 5);
+    const features = buildFeatureVector(c, hist, personalBaseline, daysIntoSeason);
+    samples.push({ features, target: c.severity / 10, weight: c.confidence_weight });
     usedCheckins.push(c);
   }
 
   return { samples, checkins: usedCheckins };
 }
 
+// ── Feature contributions ────────────────────────────────────────────────────
+
 export function getTopFeatureContributions(
   weights: number[],
-  features: number[]
+  features: number[],
 ): { name: string; contribution: number }[] {
-  const contributions = FEATURE_NAMES.map((name, i) => ({
-    name: FEATURE_DISPLAY_NAMES[name],
-    contribution: Math.abs(weights[i + 1] ?? 0) * features[i],
-  }));
-  return contributions
+  return FEATURE_NAMES
+    .map((name, i) => ({
+      name: FEATURE_DISPLAY_NAMES[name],
+      contribution: Math.abs(weights[i + 1] ?? 0) * features[i],
+    }))
     .sort((a, b) => b.contribution - a.contribution)
     .slice(0, 5)
     .filter(c => c.contribution > 0);
 }
 
+// ── Symptom sub-models ───────────────────────────────────────────────────────
+
+function trainSymptomModels(
+  samples: TrainSample[],
+  checkIns: CheckIn[],
+): { symptom: SymptomKey; probability: number }[] {
+  if (samples.length < MIN_CHECKINS_FOR_MODEL) return [];
+
+  const todayFeatArr = featureToArray(samples[samples.length - 1].features);
+
+  return SYMPTOMS.map(symptom => {
+    const symptomSamples: TrainSample[] = samples.map((s, i) => ({
+      ...s,
+      target: (checkIns[i]?.symptoms ?? []).includes(symptom) ? 1 : 0,
+    }));
+    const model = trainLogisticRegression(symptomSamples, SYMPTOM_ITERATIONS);
+    const probability = predictLR(model, todayFeatArr) / 100;
+    return { symptom, probability };
+  }).filter(p => p.probability > 0.3);
+}
+
+// ── Medication effectiveness ─────────────────────────────────────────────────
+
+export function computeMedicationEffectiveness(checkIns: CheckIn[]): MedicationEffectiveness[] {
+  const manual = checkIns.filter(c => c.entry_type === 'manual' && c.pollen_snapshot);
+  if (manual.length < 10) return [];
+
+  const categories = Object.keys(MEDICATION_DISPLAY) as MedicationCategory[];
+  const results: MedicationEffectiveness[] = [];
+
+  for (const category of categories) {
+    const withMed = manual.filter(c => c.medications.some(m => m.category === category));
+    if (withMed.length < 3) continue;
+
+    // Compare against similar-pollen days without this med
+    const withoutMed = manual.filter(c => {
+      if (c.medications.some(m => m.category === category)) return false;
+      // Similar pollen level (within 1.5 index points of average)
+      const snap = c.pollen_snapshot!;
+      const avgWith = withMed.reduce((s, w) =>
+        s + (w.pollen_snapshot!.grass_index + w.pollen_snapshot!.tree_index) / 2, 0
+      ) / withMed.length;
+      return Math.abs((snap.grass_index + snap.tree_index) / 2 - avgWith) <= 1.5;
+    });
+    if (withoutMed.length < 3) continue;
+
+    const meanWith = withMed.reduce((s, c) => s + c.severity, 0) / withMed.length;
+    const meanWithout = withoutMed.reduce((s, c) => s + c.severity, 0) / withoutMed.length;
+
+    results.push({
+      category,
+      display_name: MEDICATION_DISPLAY[category]!,
+      mean_with: Math.round(meanWith * 10) / 10,
+      mean_without: Math.round(meanWithout * 10) / 10,
+      sample_size: withMed.length,
+      effective: meanWith < meanWithout - 0.5,
+    });
+  }
+
+  return results;
+}
+
+// ── Main risk score computation ──────────────────────────────────────────────
+
 export function computeRiskScore(checkIns: CheckIn[], todaySnapshot: PollenSnapshot): RiskScore {
   const manualCheckins = checkIns.filter(c => c.entry_type === 'manual');
+  const medEffectiveness = computeMedicationEffectiveness(checkIns);
 
   if (manualCheckins.length < MIN_CHECKINS_FOR_MODEL) {
     const score = pollenOnlyScore(todaySnapshot);
@@ -106,10 +210,15 @@ export function computeRiskScore(checkIns: CheckIn[], todaySnapshot: PollenSnaps
       model_confidence: 0,
       top_features: [],
       is_preliminary: true,
+      predicted_symptoms: [],
+      medication_effectiveness: medEffectiveness,
     };
   }
 
-  const { samples, checkins } = buildTrainSamples(checkIns);
+  const personalBaseline = computePersonalBaseline(checkIns);
+  const daysIntoSeason = computeDaysIntoSeason(checkIns);
+  const { samples, checkins } = buildTrainSamples(checkIns, personalBaseline, daysIntoSeason);
+
   if (samples.length < MIN_CHECKINS_FOR_MODEL) {
     const score = pollenOnlyScore(todaySnapshot);
     return {
@@ -120,13 +229,15 @@ export function computeRiskScore(checkIns: CheckIn[], todaySnapshot: PollenSnaps
       model_confidence: 0,
       top_features: [],
       is_preliminary: true,
+      predicted_symptoms: [],
+      medication_effectiveness: medEffectiveness,
     };
   }
 
   const nTrees = nTreesForCheckInCount(samples.length);
   const lrModel = trainLogisticRegression(samples);
   const gbdtModel = trainGBDT(samples, nTrees);
-  const knnModel = buildKNNModel(29);
+  const knnModel = buildKNNModel(32);
 
   const todayCheckin: CheckIn = {
     id: 'today',
@@ -148,7 +259,7 @@ export function computeRiskScore(checkIns: CheckIn[], todaySnapshot: PollenSnaps
 
   const todayDate = new Date().toISOString().slice(0, 10);
   const histSnapshots = getSnapshotsForPastDays(todayDate, 5);
-  const todayFeatures = buildFeatureVector(todayCheckin, histSnapshots);
+  const todayFeatures = buildFeatureVector(todayCheckin, histSnapshots, personalBaseline, daysIntoSeason);
   const todayFeatArr = featureToArray(todayFeatures);
 
   const lrScore = predictLR(lrModel, todayFeatArr);
@@ -156,11 +267,10 @@ export function computeRiskScore(checkIns: CheckIn[], todaySnapshot: PollenSnaps
   const knnScore = predictKNN(knnModel, samples, todayFeatArr, checkins);
 
   const modelWeights = getModelWeights() ?? DEFAULT_WEIGHTS;
-
   const ensembleScore = Math.round(
     lrScore * modelWeights.logistic_regression +
-      gbdtScore * modelWeights.gradient_boosted_tree +
-      knnScore * modelWeights.weighted_knn
+    gbdtScore * modelWeights.gradient_boosted_tree +
+    knnScore * modelWeights.weighted_knn
   );
 
   const scores = {
@@ -173,7 +283,7 @@ export function computeRiskScore(checkIns: CheckIn[], todaySnapshot: PollenSnaps
   );
 
   const topFeatures = getTopFeatureContributions(lrModel.weights, todayFeatArr);
-  const isPreliminary = manualCheckins.length < 15;
+  const predictedSymptoms = trainSymptomModels(samples, checkins);
 
   return {
     score: Math.max(0, Math.min(100, ensembleScore)),
@@ -182,12 +292,18 @@ export function computeRiskScore(checkIns: CheckIn[], todaySnapshot: PollenSnaps
     leading_model: leadingModelKey.replace(/_/g, ' '),
     model_confidence: modelWeights[leadingModelKey],
     top_features: topFeatures,
-    is_preliminary: isPreliminary,
+    is_preliminary: manualCheckins.length < 15,
+    predicted_symptoms: predictedSymptoms,
+    medication_effectiveness: medEffectiveness,
   };
 }
 
+// ── Self-evaluation (updates model weights after each check-in) ──────────────
+
 export function selfEvaluate(checkIns: CheckIn[]): void {
-  const { samples, checkins } = buildTrainSamples(checkIns);
+  const personalBaseline = computePersonalBaseline(checkIns);
+  const daysIntoSeason = computeDaysIntoSeason(checkIns);
+  const { samples, checkins } = buildTrainSamples(checkIns, personalBaseline, daysIntoSeason);
   if (samples.length <= EVAL_HOLDOUT + MIN_CHECKINS_FOR_MODEL) return;
 
   const trainSamples = samples.slice(0, -EVAL_HOLDOUT);
@@ -197,7 +313,7 @@ export function selfEvaluate(checkIns: CheckIn[]): void {
   const nTrees = nTreesForCheckInCount(trainSamples.length);
   const lrModel = trainLogisticRegression(trainSamples);
   const gbdtModel = trainGBDT(trainSamples, nTrees);
-  const knnModel = buildKNNModel(29);
+  const knnModel = buildKNNModel(32);
 
   const lrLoss = logLossLR(lrModel, evalSamples);
   const gbdtLoss = logLossGBDT(gbdtModel, evalSamples);

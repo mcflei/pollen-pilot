@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useAppStore } from '@/store/appStore';
 import type { InsightData, SymptomSourceFlag, TriggerAssociation } from '@/types';
-import { getModelEvals, getModelWeights } from '@/lib/storage';
+import { getModelEvals, getModelWeights, computeStreak } from '@/lib/storage';
 
 const TRIGGER_KEYS = [
   { key: 'grass_index', label: 'Grass pollen' },
@@ -118,6 +118,8 @@ export function useInsights(): InsightData {
       symptom_source_flags: sourceFlags,
       leading_model: leadingModel,
       leading_model_log_loss: leadingLogLoss,
+      streak_days: computeStreak(),
+      medication_effectiveness: [],
     };
   }, [checkIns]);
 }

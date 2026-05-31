@@ -8,7 +8,19 @@
       "Bash(npm list *)",
       "Bash(node -e \"const wp=require\\('web-push'\\);const k=wp.generateVAPIDKeys\\(\\);console.log\\('PUBLIC='+k.publicKey+'\\\\nPRIVATE='+k.privateKey\\);\")",
       "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\Max\\\\Documents\\\\PollenPilot\\\\supabase\\\\functions\\\\send-reminders\")",
-      "Bash(Out-Null)"
+      "Bash(Out-Null)",
+      "Bash(git push *)",
+      "Bash(curl -s \"https://api.tomorrow.io/v4/timelines?location=35.79,-78.78&fields=treeIndex,grassIndex,weedIndex,temperature,humidity,windSpeed,epaIndex&timesteps=1d&units=imperial&apikey=3Lt0SPOGVUri2cjoEzgJkwKcxTJ9laLH\")",
+      "Bash(curl -s \"https://api.tomorrow.io/v4/timelines?location=35.79,-78.78&fields=pollenTree,pollenGrass,pollenWeed&timesteps=1d&units=imperial&apikey=3Lt0SPOGVUri2cjoEzgJkwKcxTJ9laLH\")",
+      "Bash(curl -s \"https://api.tomorrow.io/v4/timelines?location=35.79,-78.78&fields=treeIndex&timesteps=1d&units=imperial&apikey=3Lt0SPOGVUri2cjoEzgJkwKcxTJ9laLH\")",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Wire Google Pollen + Air Quality APIs, fix weather to current conditions, improve severity slider *)",
+      "Bash(vercel --prod)",
+      "Bash(vercel env *)",
+      "Bash(vercel ls *)",
+      "Bash(git commit -m 'Fix explanation copy: no pattern language before first check-in, skip API call at 0 check-ins *)",
+      "Bash(npx tsc *)",
+      "Bash(git commit -m 'Add multi-day temporal features to ML models \\(29 features, up from 20\\) *)"
     ]
   }
 }

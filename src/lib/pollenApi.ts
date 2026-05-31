@@ -232,6 +232,108 @@ export async function getPollenData(
   }
 }
 
+// ── 3-day forecast ───────────────────────────────────────────────────────────
+
+import type { ForecastDay, RiskCategory } from '@/types';
+
+function forecastRiskCategory(score: number): RiskCategory {
+  if (score <= 25) return 'clear';
+  if (score <= 50) return 'light';
+  if (score <= 75) return 'turbulence';
+  return 'high';
+}
+
+function pollenOnlyForecastScore(snap: PollenSnapshot): number {
+  const avg = (snap.grass_index + snap.tree_index + snap.weed_index + snap.mold_index) / 4;
+  return Math.round(Math.min(100, avg * 20));
+}
+
+export async function getPollenForecast(
+  lat: number,
+  lng: number,
+  city: string,
+): Promise<ForecastDay[]> {
+  const googleKey = import.meta.env.VITE_GOOGLE_API_KEY as string | undefined;
+  const tomorrowKey = import.meta.env.VITE_TOMORROW_IO_API_KEY as string | undefined;
+
+  // Fetch 3-day pollen from Google
+  let pollenDays: { date: string; tree: number; grass: number; weed: number }[] = [];
+  if (googleKey) {
+    try {
+      const res = await fetch(
+        `https://pollen.googleapis.com/v1/forecast:lookup?key=${googleKey}&location.longitude=${lng}&location.latitude=${lat}&days=4`
+      );
+      if (res.ok) {
+        const data = await res.json() as {
+          dailyInfo?: {
+            date?: { year: number; month: number; day: number };
+            pollenTypeInfo?: { code: string; indexInfo?: { value?: number } }[];
+          }[];
+        };
+        pollenDays = (data.dailyInfo ?? []).slice(1, 4).map(d => {
+          const types = d.pollenTypeInfo ?? [];
+          const idx = (code: string) => types.find(t => t.code === code)?.indexInfo?.value ?? 0;
+          const date = d.date
+            ? `${d.date.year}-${String(d.date.month).padStart(2, '0')}-${String(d.date.day).padStart(2, '0')}`
+            : '';
+          return { date, tree: idx('TREE'), grass: idx('GRASS'), weed: idx('WEED') };
+        });
+      }
+    } catch { /* fall through */ }
+  }
+
+  // Fetch 3-day weather forecast from Tomorrow.io
+  let weatherDays: { temperature_f: number; humidity_pct: number; wind_mph: number; precip_intensity: number }[] = [];
+  if (tomorrowKey) {
+    try {
+      const url =
+        `https://api.tomorrow.io/v4/timelines` +
+        `?location=${lat},${lng}` +
+        `&fields=temperature,humidity,windSpeed,precipitationIntensity` +
+        `&timesteps=1d&units=imperial&apikey=${tomorrowKey}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json() as {
+          data: { timelines: { intervals: { values: { temperature?: number; humidity?: number; windSpeed?: number; precipitationIntensity?: number } }[] }[] };
+        };
+        weatherDays = (data.data.timelines[0]?.intervals ?? []).slice(1, 4).map(i => ({
+          temperature_f: i.values.temperature ?? 70,
+          humidity_pct: i.values.humidity ?? 50,
+          wind_mph: i.values.windSpeed ?? 5,
+          precip_intensity: i.values.precipitationIntensity ?? 0,
+        }));
+      }
+    } catch { /* fall through */ }
+  }
+
+  const today = new Date();
+  return [1, 2, 3].map(offset => {
+    const d = new Date(today.getTime() + offset * 24 * 60 * 60 * 1000);
+    const dateStr = d.toISOString().slice(0, 10);
+    const pollen = pollenDays[offset - 1];
+    const weather = weatherDays[offset - 1];
+
+    const snapshot: PollenSnapshot = {
+      date: pollen?.date || dateStr,
+      location: { lat, lng, city },
+      grass_index: pollen?.grass ?? 0,
+      tree_index: pollen?.tree ?? 0,
+      weed_index: pollen?.weed ?? 0,
+      mold_index: weather ? Math.round(weather.humidity_pct > 80 ? 3 : weather.humidity_pct > 70 ? 2 : 1) : 1,
+      ragweed_index: pollen?.weed ?? 0,
+      temperature_f: weather?.temperature_f ?? 72,
+      humidity_pct: weather?.humidity_pct ?? 55,
+      wind_mph: weather?.wind_mph ?? 7,
+      precip_intensity: weather?.precip_intensity ?? 0,
+      aqi: 40,
+      source: pollen ? 'tomorrow_io' : 'mock',
+    };
+
+    const score = pollenOnlyForecastScore(snapshot);
+    return { date: dateStr, snapshot, score, category: forecastRiskCategory(score) };
+  });
+}
+
 // ── Display helpers ──────────────────────────────────────────────────────────
 
 export function indexLabel(index: number): 'None' | 'Very Low' | 'Low' | 'Moderate' | 'High' | 'Very High' {

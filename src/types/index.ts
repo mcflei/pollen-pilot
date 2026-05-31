@@ -36,6 +36,15 @@ export interface MedicationDBEntry {
   dose_form: string;
 }
 
+export interface MedicationEffectiveness {
+  category: MedicationCategory;
+  display_name: string;
+  mean_with: number;
+  mean_without: number;
+  sample_size: number;
+  effective: boolean;
+}
+
 export interface PollenSnapshot {
   date: string;
   location: { lat: number; lng: number; city: string };
@@ -50,6 +59,13 @@ export interface PollenSnapshot {
   precip_intensity: number;
   aqi: number;
   source: 'tomorrow_io' | 'mock';
+}
+
+export interface ForecastDay {
+  date: string;
+  snapshot: PollenSnapshot;
+  score: number;
+  category: RiskCategory;
 }
 
 export interface CheckIn {
@@ -80,11 +96,18 @@ export interface UserProfile {
   typical_outdoor_activity: 'low' | 'moderate' | 'high';
   default_medications: string[];
   onboarding_complete: boolean;
+  allergen_profile?: {
+    grass: boolean;
+    tree: boolean;
+    weed: boolean;
+    ragweed: boolean;
+    mold: boolean;
+  };
   notifications: {
     checkin_reminder: boolean;
-    reminder_times: string[];       // ['HH:MM'] 24h; one entry normally, two for 'twice'
-    reminder_days: number[] | null; // 0–6 Sun–Sat; null means every day
-    reminder_timezone: string;      // IANA e.g. 'America/New_York'
+    reminder_times: string[];
+    reminder_days: number[] | null;
+    reminder_timezone: string;
     high_risk_alert: boolean;
     clear_skies_alert: boolean;
   };
@@ -99,19 +122,19 @@ export interface FeatureVector {
   // 1-day lags
   grass_lag1: number;
   tree_lag1: number;
-  // 2-3 day lags (accumulation)
+  // 2-3 day lags (accumulation effect)
   grass_lag2: number;
   grass_lag3: number;
   tree_lag2: number;
   // Rolling averages
   grass_3day_avg: number;
   tree_3day_avg: number;
-  // Trend: 1 = rising, 0 = falling
+  // Trend
   grass_rising: number;
-  // Sustained exposure: fraction of last 5 days with high pollen
+  // Sustained high pollen: fraction of last 5 days with high pollen
   days_high_pollen_last5: number;
-  // Rain yesterday washes pollen down
-  precip_lag1: number;
+  // Rainfall washes pollen — exponential decay over 4 days
+  rain_washout_decay: number;
   // Weather
   humidity_norm: number;
   wind_norm: number;
@@ -119,6 +142,7 @@ export interface FeatureVector {
   // Interactions
   grass_x_humidity: number;
   grass_x_wind: number;
+  outdoor_x_grass: number;
   // Behavior
   hours_outside_norm: number;
   exercised_outside: number;
@@ -126,11 +150,14 @@ export interface FeatureVector {
   took_nasal_spray: number;
   sleep_hours_norm: number;
   sleep_quality_num: number;
-  // Cyclical time encoding
+  // Cyclical time
   day_of_week_sin: number;
   day_of_week_cos: number;
   week_of_year_sin: number;
   week_of_year_cos: number;
+  // Personalization
+  days_into_season: number;
+  personal_severity_baseline: number;
 }
 
 export interface TrainSample {
@@ -193,6 +220,8 @@ export interface RiskScore {
   model_confidence: number;
   top_features: { name: string; contribution: number }[];
   is_preliminary: boolean;
+  predicted_symptoms: { symptom: SymptomKey; probability: number }[];
+  medication_effectiveness: MedicationEffectiveness[];
 }
 
 export interface TriggerAssociation {
@@ -212,6 +241,8 @@ export interface InsightData {
   symptom_source_flags: SymptomSourceFlag[];
   leading_model: string;
   leading_model_log_loss: number;
+  streak_days: number;
+  medication_effectiveness: MedicationEffectiveness[];
 }
 
 export interface SymptomSourceFlag {
