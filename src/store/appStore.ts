@@ -165,13 +165,13 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     // 5. Compute risk score + explanation
     const riskScore = computeRiskScore(allCheckIns, snapshot);
-    const cachedExplanation = getCachedExplanation();
+    const manualCount = allCheckIns.filter(c => c.entry_type === 'manual').length;
+    const cachedExplanation = manualCount > 0 ? getCachedExplanation() : null;
     if (cachedExplanation) {
       riskScore.explanation = cachedExplanation;
       set({ riskScore, isLoading: false });
     } else {
       set({ riskScore, isLoading: false });
-      const manualCount = allCheckIns.filter(c => c.entry_type === 'manual').length;
       generateExplanation(riskScore, manualCount).then(explanation => {
         set(state => ({
           riskScore: state.riskScore ? { ...state.riskScore, explanation } : null,
