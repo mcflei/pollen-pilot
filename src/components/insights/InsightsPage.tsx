@@ -108,18 +108,22 @@ export function InsightsPage() {
         <SymptomSourceCheck flags={insights.symptom_source_flags} />
       </div>
 
-      {/* Model info */}
-      <div className="mx-4 bg-gray-50 rounded-xl p-4">
-        <h3 className="font-semibold text-gray-800 text-sm mb-1">Model status</h3>
-        <div className="text-xs text-gray-500">
-          Leading model: <span className="font-medium text-gray-700">{insights.leading_model}</span>
-        </div>
-        {insights.leading_model_log_loss < 1 && (
+      {/* Model info — only shown once ML models are active */}
+      {insights.leading_model !== 'pollen_index' && (
+        <div className="mx-4 bg-gray-50 rounded-xl p-4">
+          <h3 className="font-semibold text-gray-800 text-sm mb-1">Model status</h3>
           <div className="text-xs text-gray-500">
-            Log-loss: <span className="font-medium text-gray-700">{insights.leading_model_log_loss.toFixed(3)}</span>
+            Leading model:{' '}
+            <span className="font-medium text-gray-700 capitalize">{insights.leading_model}</span>
           </div>
-        )}
-      </div>
+          {insights.leading_model_log_loss < 1 && (
+            <div className="text-xs text-gray-500">
+              Prediction accuracy (log-loss):{' '}
+              <span className="font-medium text-gray-700">{insights.leading_model_log_loss.toFixed(3)}</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
