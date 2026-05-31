@@ -3,6 +3,7 @@ import { useAppStore } from '@/store/appStore';
 import { exportAllData, exportAllDataJSON, resetAllData } from '@/lib/storage';
 import { reverseGeocode } from '@/lib/pollenApi';
 import { subscribeToPush, unsubscribeFromPush } from '@/lib/notifications';
+import { useDarkMode } from '@/hooks/useDarkMode';
 import type { UserProfile } from '@/types';
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -135,6 +136,7 @@ export function SettingsPage() {
   const resetData = useAppStore(s => s.resetData);
   const signOut = useAppStore(s => s.signOut);
   const [exported, setExported] = useState(false);
+  const { dark, setDark } = useDarkMode();
   const [locStatus, setLocStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [locError, setLocError] = useState<string | null>(null);
   const [pushError, setPushError] = useState<string | null>(null);
@@ -207,6 +209,12 @@ export function SettingsPage() {
       <div className="px-4 pt-4">
         <h1 className="font-lora text-xl font-semibold text-gray-900">Settings</h1>
       </div>
+
+      <Section title="Appearance">
+        <Row label="Dark mode">
+          <Toggle checked={dark} onChange={setDark} />
+        </Row>
+      </Section>
 
       <Section title="Check-in schedule">
         <Row label="Frequency">

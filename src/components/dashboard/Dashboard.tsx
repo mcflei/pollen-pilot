@@ -10,6 +10,8 @@ import { PollenRadar } from './PollenRadar';
 import { TriggerMap } from './TriggerMap';
 import { Recommendations } from './Recommendations';
 import { ForecastStrip } from './ForecastStrip';
+import { BestDaysView } from './BestDaysView';
+import { PollenHeatmap } from './PollenHeatmap';
 import { CheckInModal } from '@/components/checkin/CheckInModal';
 
 const SYMPTOM_LABELS: Record<string, string> = {
@@ -29,7 +31,9 @@ export function Dashboard() {
   const { manualCheckIns, checkInSubmittedToday } = useCheckIns();
   const insights = useInsights();
   const forecast = useAppStore(s => s.forecast);
+  const profile = useAppStore(s => s.profile);
   const [showCheckIn, setShowCheckIn] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(false);
 
   const predictedSymptoms = riskScore?.predicted_symptoms ?? [];
   const streak = insights.streak_days;
@@ -98,7 +102,21 @@ export function Dashboard() {
 
       {pollenData && <PollenRadar data={pollenData} />}
 
-      {forecast.length > 0 && <ForecastStrip forecast={forecast} />}
+      {/* Pollen map button */}
+      {profile?.location && (
+        <div className="mx-4">
+          <button
+            onClick={() => setShowHeatmap(true)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-pilot text-sm font-medium transition-opacity hover:opacity-80"
+          >
+            <span>🗺️</span>
+            <span>View live pollen map</span>
+          </button>
+        </div>
+      )}
+
+      {forecast.length > 0 && <ForecastStrip forecast={forecast.slice(0, 3)} />}
+      {forecast.length > 0 && <BestDaysView forecast={forecast} />}
 
       <TriggerMap
         associations={insights.trigger_associations}
@@ -108,6 +126,13 @@ export function Dashboard() {
       {riskScore && <Recommendations category={riskScore.category} />}
 
       {showCheckIn && <CheckInModal onClose={() => setShowCheckIn(false)} />}
+      {showHeatmap && profile?.location && (
+        <PollenHeatmap
+          lat={profile.location.lat}
+          lng={profile.location.lng}
+          onClose={() => setShowHeatmap(false)}
+        />
+      )}
     </div>
   );
 }

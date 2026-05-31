@@ -84,6 +84,7 @@ export interface CheckIn {
   sleep_quality: 'poor' | 'fair' | 'good' | 'great';
   air_purifier_on: boolean;
   pollen_snapshot: PollenSnapshot | null;
+  possible_illness?: boolean;
 }
 
 export interface UserProfile {

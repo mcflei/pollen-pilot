@@ -261,7 +261,7 @@ export async function getPollenForecast(
   if (googleKey) {
     try {
       const res = await fetch(
-        `https://pollen.googleapis.com/v1/forecast:lookup?key=${googleKey}&location.longitude=${lng}&location.latitude=${lat}&days=4`
+        `https://pollen.googleapis.com/v1/forecast:lookup?key=${googleKey}&location.longitude=${lng}&location.latitude=${lat}&days=6`
       );
       if (res.ok) {
         const data = await res.json() as {
@@ -270,7 +270,7 @@ export async function getPollenForecast(
             pollenTypeInfo?: { code: string; indexInfo?: { value?: number } }[];
           }[];
         };
-        pollenDays = (data.dailyInfo ?? []).slice(1, 4).map(d => {
+        pollenDays = (data.dailyInfo ?? []).slice(1, 6).map(d => {
           const types = d.pollenTypeInfo ?? [];
           const idx = (code: string) => types.find(t => t.code === code)?.indexInfo?.value ?? 0;
           const date = d.date
@@ -296,7 +296,7 @@ export async function getPollenForecast(
         const data = await res.json() as {
           data: { timelines: { intervals: { values: { temperature?: number; humidity?: number; windSpeed?: number; precipitationIntensity?: number } }[] }[] };
         };
-        weatherDays = (data.data.timelines[0]?.intervals ?? []).slice(1, 4).map(i => ({
+        weatherDays = (data.data.timelines[0]?.intervals ?? []).slice(1, 6).map(i => ({
           temperature_f: i.values.temperature ?? 70,
           humidity_pct: i.values.humidity ?? 50,
           wind_mph: i.values.windSpeed ?? 5,
@@ -307,7 +307,7 @@ export async function getPollenForecast(
   }
 
   const today = new Date();
-  return [1, 2, 3].map(offset => {
+  return [1, 2, 3, 4, 5].map(offset => {
     const d = new Date(today.getTime() + offset * 24 * 60 * 60 * 1000);
     const dateStr = d.toISOString().slice(0, 10);
     const pollen = pollenDays[offset - 1];

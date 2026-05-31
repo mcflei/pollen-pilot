@@ -39,6 +39,7 @@ export function CheckInModal({ onClose }: Props) {
   const [windowsOpen, setWindowsOpen] = useState(false);
   const [exercisedOutside, setExercisedOutside] = useState(false);
   const [airPurifierOn, setAirPurifierOn] = useState(false);
+  const [possibleIllness, setPossibleIllness] = useState(false);
   const [notes, setNotes] = useState('');
 
   async function handleSubmit() {
@@ -53,6 +54,7 @@ export function CheckInModal({ onClose }: Props) {
       windows_open: windowsOpen,
       exercised_outside: exercisedOutside,
       air_purifier_on: airPurifierOn,
+      possible_illness: possibleIllness,
       notes,
     });
     setIsSubmitting(false);
@@ -89,6 +91,20 @@ export function CheckInModal({ onClose }: Props) {
               <Toggle label="Exercised outside" checked={exercisedOutside} onChange={setExercisedOutside} />
               <Toggle label="Air purifier on" checked={airPurifierOn} onChange={setAirPurifierOn} />
             </div>
+          </div>
+
+          {/* Illness flag */}
+          <div className={`rounded-xl border p-4 transition-colors ${possibleIllness ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100'}`}>
+            <Toggle
+              label="Possible cold or flu (not allergies)"
+              checked={possibleIllness}
+              onChange={setPossibleIllness}
+            />
+            {possibleIllness && (
+              <p className="text-xs text-amber-700 mt-2">
+                This check-in will be marked as a possible illness day and weighted less in your allergy model.
+              </p>
+            )}
           </div>
 
           {/* Notes */}

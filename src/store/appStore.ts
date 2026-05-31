@@ -197,7 +197,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       id: uuidv4(),
       timestamp: new Date().toISOString(),
       entry_type: 'manual',
-      confidence_weight: 1.0,
+      // Illness days get near-zero weight — they shouldn't train the allergy model
+      confidence_weight: data.possible_illness ? 0.05 : 1.0,
       pollen_snapshot: pollenData ?? null,
     };
 

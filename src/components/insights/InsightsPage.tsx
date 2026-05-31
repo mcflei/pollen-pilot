@@ -6,6 +6,7 @@ import { TrendChart } from './TrendChart';
 import { SymptomSourceCheck } from './SymptomSourceCheck';
 import { CalendarHeatmap } from './CalendarHeatmap';
 import { MedicationEffectivenessSection } from './MedicationEffectivenessSection';
+import { AchievementsSection } from './AchievementsSection';
 
 export function InsightsPage() {
   const insights = useInsights();
@@ -106,6 +107,11 @@ export function InsightsPage() {
       {/* Symptom source check */}
       <div className="mx-4">
         <SymptomSourceCheck flags={insights.symptom_source_flags} />
+      </div>
+
+      {/* Achievements */}
+      <div className="mx-4">
+        <AchievementsSection />
       </div>
 
       {/* Model info — only shown once ML models are active */}
