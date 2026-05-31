@@ -11,6 +11,7 @@ const KEYS = {
   PROFILE: 'pp_profile',
   CHECKINS: 'pp_checkins',
   POLLEN_CACHE: 'pp_pollen_cache',
+  FORECAST_CACHE: 'pp_forecast_cache',
   MODEL_WEIGHTS: 'pp_model_weights',
   MODEL_EVALS: 'pp_model_evals',
   ONBOARDING_DONE: 'pp_onboarding_done',
@@ -71,7 +72,7 @@ export function isPollenCacheFresh(): boolean {
   const cache = getPollenCache();
   if (!cache) return false;
   const ageMs = Date.now() - new Date(cache.fetched_at).getTime();
-  return ageMs < 6 * 60 * 60 * 1000;
+  return ageMs < 1 * 60 * 60 * 1000;
 }
 
 export function getModelWeights(): ModelWeights | null {
@@ -97,6 +98,20 @@ export function isOnboardingDone(): boolean {
 
 export function markOnboardingDone(): void {
   localStorage.setItem(KEYS.ONBOARDING_DONE, 'true');
+}
+
+export function getForecastCache(): { data: unknown; fetched_at: string } | null {
+  return read<{ data: unknown; fetched_at: string }>(KEYS.FORECAST_CACHE);
+}
+
+export function saveForecastCache(data: unknown): void {
+  write(KEYS.FORECAST_CACHE, { data, fetched_at: new Date().toISOString() });
+}
+
+export function isForecastCacheFresh(): boolean {
+  const cache = getForecastCache();
+  if (!cache) return false;
+  return Date.now() - new Date(cache.fetched_at).getTime() < 60 * 60 * 1000;
 }
 
 export function computeStreak(): number {

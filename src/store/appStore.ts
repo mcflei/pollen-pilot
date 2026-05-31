@@ -11,6 +11,9 @@ import {
   isOnboardingDone,
   getCachedExplanation,
   getModelWeights,
+  getForecastCache,
+  saveForecastCache,
+  isForecastCacheFresh,
 } from '@/lib/storage';
 import { getPollenData, getMockPollenData, getPollenForecast } from '@/lib/pollenApi';
 import type { ForecastDay } from '@/types';
@@ -171,11 +174,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ pollenData: snapshot });
     pushPollenSnapshot(snapshot).catch(() => {});
 
-    // Fetch 3-day forecast in background
+    // Fetch forecast — serve from cache if fresh, otherwise fetch in background
     if (profile?.location) {
-      getPollenForecast(profile.location.lat, profile.location.lng, profile.location.city)
-        .then(forecast => set({ forecast }))
-        .catch(() => {});
+      if (isForecastCacheFresh()) {
+        const cached = getForecastCache();
+        if (cached) set({ forecast: cached.data as ForecastDay[] });
+      } else {
+        getPollenForecast(profile.location.lat, profile.location.lng, profile.location.city)
+          .then(forecast => { set({ forecast }); saveForecastCache(forecast); })
+          .catch(() => {});
+      }
     }
 
     // 4. Auto-assume healthy days
