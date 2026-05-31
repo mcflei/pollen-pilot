@@ -128,3 +128,11 @@ export function getSnapshotForDate(date: string): PollenSnapshot | null {
   const match = checkins.find(c => c.pollen_snapshot?.date === date);
   return match?.pollen_snapshot ?? null;
 }
+
+export function getSnapshotsForPastDays(fromDate: string, nDays: number): (PollenSnapshot | null)[] {
+  const base = new Date(fromDate);
+  return Array.from({ length: nDays }, (_, i) => {
+    const d = new Date(base.getTime() - (i + 1) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    return getSnapshotForDate(d);
+  });
+}

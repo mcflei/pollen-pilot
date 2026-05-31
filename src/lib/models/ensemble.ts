@@ -19,7 +19,7 @@ import {
   getModelWeights,
   saveModelWeights,
   appendModelEval,
-  getSnapshotForDate,
+  getSnapshotsForPastDays,
 } from '@/lib/storage';
 
 const MIN_CHECKINS_FOR_MODEL = 7;
@@ -64,11 +64,9 @@ function buildTrainSamples(checkIns: CheckIn[]): { samples: TrainSample[]; check
     const c = checkIns[i];
     if (!c.pollen_snapshot) continue;
 
-    const prevDate = new Date(new Date(c.timestamp).getTime() - 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10);
-    const prevSnap = getSnapshotForDate(prevDate);
-    const features = buildFeatureVector(c, prevSnap);
+    const fromDate = new Date(c.timestamp).toISOString().slice(0, 10);
+    const histSnapshots = getSnapshotsForPastDays(fromDate, 5);
+    const features = buildFeatureVector(c, histSnapshots);
 
     samples.push({
       features,
@@ -128,7 +126,7 @@ export function computeRiskScore(checkIns: CheckIn[], todaySnapshot: PollenSnaps
   const nTrees = nTreesForCheckInCount(samples.length);
   const lrModel = trainLogisticRegression(samples);
   const gbdtModel = trainGBDT(samples, nTrees);
-  const knnModel = buildKNNModel(20);
+  const knnModel = buildKNNModel(29);
 
   const todayCheckin: CheckIn = {
     id: 'today',
@@ -148,9 +146,9 @@ export function computeRiskScore(checkIns: CheckIn[], todaySnapshot: PollenSnaps
     pollen_snapshot: todaySnapshot,
   };
 
-  const prevDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const prevSnap = getSnapshotForDate(prevDate);
-  const todayFeatures = buildFeatureVector(todayCheckin, prevSnap);
+  const todayDate = new Date().toISOString().slice(0, 10);
+  const histSnapshots = getSnapshotsForPastDays(todayDate, 5);
+  const todayFeatures = buildFeatureVector(todayCheckin, histSnapshots);
   const todayFeatArr = featureToArray(todayFeatures);
 
   const lrScore = predictLR(lrModel, todayFeatArr);
@@ -199,7 +197,7 @@ export function selfEvaluate(checkIns: CheckIn[]): void {
   const nTrees = nTreesForCheckInCount(trainSamples.length);
   const lrModel = trainLogisticRegression(trainSamples);
   const gbdtModel = trainGBDT(trainSamples, nTrees);
-  const knnModel = buildKNNModel(20);
+  const knnModel = buildKNNModel(29);
 
   const lrLoss = logLossLR(lrModel, evalSamples);
   const gbdtLoss = logLossGBDT(gbdtModel, evalSamples);

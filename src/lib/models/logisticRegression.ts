@@ -1,7 +1,7 @@
 import type { LogisticRegressionModel, TrainSample } from '@/types';
 import { featureToArray } from './featureEngineering';
 
-const FEATURE_COUNT = 20;
+const FEATURE_COUNT = 29;
 const LEARNING_RATE = 0.01;
 const REGULARIZATION = 0.001;
 const ITERATIONS = 500;

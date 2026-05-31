@@ -91,22 +91,42 @@ export interface UserProfile {
 }
 
 export interface FeatureVector {
+  // Today's pollen
   grass_norm: number;
   tree_norm: number;
   weed_norm: number;
   mold_norm: number;
+  // 1-day lags
   grass_lag1: number;
   tree_lag1: number;
+  // 2-3 day lags (accumulation)
+  grass_lag2: number;
+  grass_lag3: number;
+  tree_lag2: number;
+  // Rolling averages
+  grass_3day_avg: number;
+  tree_3day_avg: number;
+  // Trend: 1 = rising, 0 = falling
+  grass_rising: number;
+  // Sustained exposure: fraction of last 5 days with high pollen
+  days_high_pollen_last5: number;
+  // Rain yesterday washes pollen down
+  precip_lag1: number;
+  // Weather
   humidity_norm: number;
   wind_norm: number;
   temp_norm: number;
+  // Interactions
   grass_x_humidity: number;
   grass_x_wind: number;
+  // Behavior
   hours_outside_norm: number;
+  exercised_outside: number;
   took_antihistamine: number;
   took_nasal_spray: number;
   sleep_hours_norm: number;
   sleep_quality_num: number;
+  // Cyclical time encoding
   day_of_week_sin: number;
   day_of_week_cos: number;
   week_of_year_sin: number;
