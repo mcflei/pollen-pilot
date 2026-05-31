@@ -33,9 +33,9 @@ export function computeAchievements(checkIns: CheckIn[]): Achievement[] {
 
   const definitions: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
     { id: 'first_checkin',    icon: '✈️', name: 'First Flight',       description: 'Logged your first check-in' },
-    { id: 'checkins_7',       icon: '🤖', name: 'Pattern Recognition', description: 'ML models activated (7 check-ins)' },
-    { id: 'checkins_10',      icon: '📊', name: 'Data Collector',      description: '10 check-ins logged' },
-    { id: 'checkins_30',      icon: '🎖️', name: 'Veteran Pilot',       description: '30 check-ins logged' },
+    { id: 'checkins_7',       icon: '🛩️', name: "Private Pilot's License",  description: 'ML models activated — your personal patterns are now in the mix (7 check-ins)' },
+    { id: 'checkins_10',      icon: '📊', name: 'Data Collector',           description: '10 check-ins logged' },
+    { id: 'checkins_30',      icon: '✈️', name: "Commercial Pilot's License", description: '30 check-ins — your model is well-trained and highly personalized' },
     { id: 'streak_3',         icon: '🔥', name: 'Co-pilot',            description: '3-day check-in streak' },
     { id: 'streak_7',         icon: '🧭', name: 'Navigator',           description: '7-day check-in streak' },
     { id: 'streak_30',        icon: '🏆', name: 'Ace Pilot',           description: '30-day check-in streak' },
