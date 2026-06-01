@@ -44,11 +44,11 @@ export function AuthScreen() {
 
   if (checkEmail) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-sky-50 to-white px-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-6">
         <div className="text-center max-w-xs">
           <div className="text-5xl mb-4">✉️</div>
-          <h2 className="font-lora text-2xl font-semibold text-gray-900 mb-2">Check your email</h2>
-          <p className="text-gray-500 text-sm leading-relaxed">
+          <h2 className="font-lora text-2xl font-semibold text-gray-900 dark:text-white mb-2">Check your email</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
             We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account,
             then return here to sign in.
           </p>
@@ -64,22 +64,24 @@ export function AuthScreen() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-sky-50 to-white px-6">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="text-4xl mb-3">✈️</div>
-          <h1 className="font-lora text-3xl font-semibold text-gray-900">Pollen Pilot</h1>
-          <p className="text-gray-500 text-sm mt-1">Navigate allergy season with confidence</p>
+          <h1 className="font-lora text-3xl font-semibold text-gray-900 dark:text-white">Pollen Pilot</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Navigate allergy season with confidence</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex rounded-lg bg-gray-100 p-1 mb-5">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1 mb-5">
             {(['signin', 'signup'] as Mode[]).map(m => (
               <button
                 key={m}
                 onClick={() => { setMode(m); setError(null); }}
                 className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  mode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+                  mode === m
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400'
                 }`}
               >
                 {m === 'signin' ? 'Sign In' : 'Create Account'}
@@ -89,18 +91,18 @@ export function AuthScreen() {
 
           <form onSubmit={handleEmailAuth} className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
                 placeholder="you@example.com"
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-pilot focus:border-transparent"
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-pilot focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
               <input
                 type="password"
                 value={password}
@@ -108,7 +110,7 @@ export function AuthScreen() {
                 required
                 minLength={6}
                 placeholder="Min. 6 characters"
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-pilot focus:border-transparent"
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-pilot focus:border-transparent"
               />
             </div>
 
@@ -124,22 +126,22 @@ export function AuthScreen() {
           </form>
 
           <div className="flex items-center gap-3 my-4">
-            <div className="flex-1 h-px bg-gray-100" />
+            <div className="flex-1 h-px bg-gray-100 dark:bg-gray-600" />
             <span className="text-xs text-gray-400">or</span>
-            <div className="flex-1 h-px bg-gray-100" />
+            <div className="flex-1 h-px bg-gray-100 dark:bg-gray-600" />
           </div>
 
           <button
             onClick={handleGoogle}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-gray-200 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
           >
             <GoogleIcon />
             Continue with Google
           </button>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-4">
+        <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-4">
           Your data is private to your account and never sold.
         </p>
       </div>
