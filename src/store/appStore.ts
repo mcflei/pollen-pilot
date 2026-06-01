@@ -6,6 +6,7 @@ import {
   getCheckIns,
   saveCheckIns,
   appendCheckIn,
+  updateCheckIn as storageUpdateCheckIn,
   clearCheckIns,
   markOnboardingDone,
   isOnboardingDone,
@@ -16,6 +17,8 @@ import {
   isForecastCacheFresh,
   clearPollenCache,
 } from '@/lib/storage';
+import { computeAchievements, markAchievementsSeen } from '@/lib/achievements';
+import type { Achievement } from '@/lib/achievements';
 import { getPollenData, getMockPollenData, getPollenForecast, reverseGeocode } from '@/lib/pollenApi';
 import type { ForecastDay } from '@/types';
 import { computeRiskScore, selfEvaluate } from '@/lib/models/ensemble';
@@ -38,6 +41,8 @@ function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+type CheckInPayload = Omit<CheckIn, 'id' | 'timestamp' | 'entry_type' | 'confidence_weight' | 'pollen_snapshot'>;
+
 interface AppState {
   profile: UserProfile | null;
   checkIns: CheckIn[];
@@ -48,12 +53,14 @@ interface AppState {
   onboardingDone: boolean;
   checkInSubmittedToday: boolean;
   lastCheckInIllnessFlagged: boolean;
+  pendingAchievements: Achievement[];
 
   initApp: () => Promise<void>;
   completeOnboarding: (profile: UserProfile) => void;
-  submitCheckIn: (
-    data: Omit<CheckIn, 'id' | 'timestamp' | 'entry_type' | 'confidence_weight' | 'pollen_snapshot'>
-  ) => Promise<void>;
+  submitCheckIn: (data: CheckInPayload) => Promise<void>;
+  updateTodayCheckIn: (id: string, data: CheckInPayload) => Promise<void>;
+  overrideIllness: (checkInId: string) => void;
+  clearFirstPendingAchievement: () => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   refreshPollenData: () => Promise<void>;
   resetData: () => void;
@@ -131,6 +138,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   onboardingDone: false,
   checkInSubmittedToday: false,
   lastCheckInIllnessFlagged: false,
+  pendingAchievements: [],
 
   initApp: async () => {
     set({ isLoading: true });
@@ -240,9 +248,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().initApp();
   },
 
-  submitCheckIn: async (
-    data: Omit<CheckIn, 'id' | 'timestamp' | 'entry_type' | 'confidence_weight' | 'pollen_snapshot'>
-  ) => {
+  submitCheckIn: async (data: CheckInPayload) => {
     const { pollenData, checkIns } = get();
     const illnessFlagged = detectProbableCold(data.severity, pollenData, data.hours_outside);
     const checkIn: CheckIn = {
@@ -256,9 +262,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       pollen_snapshot: pollenData ?? null,
     };
 
+    // Compute achievements BEFORE appending so computeStreak() reads old localStorage state
+    const preAchievements = computeAchievements(checkIns);
+
     appendCheckIn(checkIn);
     const allCheckIns = [...checkIns, checkIn];
     set({ checkIns: allCheckIns, checkInSubmittedToday: true, lastCheckInIllnessFlagged: illnessFlagged });
+
+    // Detect newly unlocked achievements (post-append, so streak is updated)
+    const postAchievements = computeAchievements(allCheckIns);
+    const preUnlocked = new Set(preAchievements.filter(a => a.unlocked).map(a => a.id));
+    const newlyUnlocked = postAchievements.filter(a => a.unlocked && !preUnlocked.has(a.id));
+    if (newlyUnlocked.length > 0) {
+      markAchievementsSeen(newlyUnlocked.map(a => a.id));
+      set(state => ({ pendingAchievements: [...state.pendingAchievements, ...newlyUnlocked] }));
+    }
 
     pushCheckIn(checkIn).catch(() => {});
 
@@ -273,6 +291,47 @@ export const useAppStore = create<AppState>((set, get) => ({
       const explanation = await generateExplanation(riskScore, manualCount);
       set({ riskScore: { ...riskScore, explanation } });
     }
+  },
+
+  updateTodayCheckIn: async (id: string, data: CheckInPayload) => {
+    const { pollenData, checkIns } = get();
+    const illnessFlagged = detectProbableCold(data.severity, pollenData, data.hours_outside);
+    const updates: Partial<CheckIn> = {
+      ...data,
+      possible_illness: illnessFlagged,
+      illness_override: undefined,
+      confidence_weight: illnessFlagged ? 0.05 : 1.0,
+    };
+    storageUpdateCheckIn(id, updates);
+    const allCheckIns = checkIns.map(c => c.id === id ? { ...c, ...updates } : c);
+    set({ checkIns: allCheckIns, lastCheckInIllnessFlagged: illnessFlagged });
+
+    pushCheckIn(allCheckIns.find(c => c.id === id)!).catch(() => {});
+
+    if (pollenData) {
+      const riskScore = computeRiskScore(allCheckIns, pollenData);
+      const manualCount = allCheckIns.filter(c => c.entry_type === 'manual').length;
+      const explanation = await generateExplanation(riskScore, manualCount);
+      set({ riskScore: { ...riskScore, explanation } });
+    }
+  },
+
+  overrideIllness: (checkInId: string) => {
+    const { checkIns, pollenData } = get();
+    storageUpdateCheckIn(checkInId, { illness_override: true, confidence_weight: 1.0 });
+    const allCheckIns = checkIns.map(c =>
+      c.id === checkInId ? { ...c, illness_override: true, confidence_weight: 1.0 } : c
+    );
+    set({ checkIns: allCheckIns, lastCheckInIllnessFlagged: false });
+    pushCheckIn(allCheckIns.find(c => c.id === checkInId)!).catch(() => {});
+    if (pollenData) {
+      const riskScore = computeRiskScore(allCheckIns, pollenData);
+      set({ riskScore });
+    }
+  },
+
+  clearFirstPendingAchievement: () => {
+    set(state => ({ pendingAchievements: state.pendingAchievements.slice(1) }));
   },
 
   updateProfile: (updates) => {

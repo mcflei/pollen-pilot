@@ -56,6 +56,14 @@ export function saveCheckIns(checkIns: CheckIn[]): void {
   write(KEYS.CHECKINS, checkIns);
 }
 
+export function updateCheckIn(id: string, updates: Partial<CheckIn>): void {
+  const all = getCheckIns();
+  const idx = all.findIndex(c => c.id === id);
+  if (idx === -1) return;
+  all[idx] = { ...all[idx], ...updates };
+  write(KEYS.CHECKINS, all);
+}
+
 export function clearCheckIns(): void {
   localStorage.removeItem(KEYS.CHECKINS);
 }

@@ -11,6 +11,7 @@ import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import { Dashboard } from '@/components/dashboard/Dashboard';
 import { InsightsPage } from '@/components/insights/InsightsPage';
 import { SettingsPage } from '@/components/settings/SettingsPage';
+import { AchievementToast } from '@/components/achievements/AchievementToast';
 
 export function App() {
   useDarkMode(); // Apply dark class immediately on every mount, not just when Settings tab is visited
@@ -73,6 +74,7 @@ export function App() {
         </Routes>
       </main>
       <TabBar />
+      <AchievementToast />
     </div>
   );
 }

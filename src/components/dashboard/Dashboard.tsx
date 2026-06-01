@@ -28,25 +28,29 @@ const SYMPTOM_LABELS: Record<string, string> = {
 export function Dashboard() {
   const { riskScore } = useRiskScore();
   const { pollenData } = usePollenData();
-  const { manualCheckIns, checkInSubmittedToday } = useCheckIns();
+  const { manualCheckIns, checkInSubmittedToday, todaysCheckIn } = useCheckIns();
   const insights = useInsights();
   const forecast = useAppStore(s => s.forecast);
   const profile = useAppStore(s => s.profile);
   const illnessFlagged = useAppStore(s => s.lastCheckInIllnessFlagged);
+  const overrideIllness = useAppStore(s => s.overrideIllness);
   const [showCheckIn, setShowCheckIn] = useState(false);
+  const [showEditCheckIn, setShowEditCheckIn] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(false);
 
   const predictedSymptoms = riskScore?.predicted_symptoms ?? [];
   const streak = insights.streak_days;
 
+  const todayIllnessOverridden = todaysCheckIn?.illness_override === true;
+
   return (
     <div className="pb-6 space-y-5">
       <div className="px-4 pt-4 flex items-center justify-between">
-        <h1 className="font-lora text-xl font-semibold text-gray-900">Today's flight plan</h1>
+        <h1 className="font-lora text-xl font-semibold text-gray-900 dark:text-white">Today's flight plan</h1>
         {streak > 1 && (
-          <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
+          <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-full px-3 py-1">
             <span className="text-sm">🔥</span>
-            <span className="text-xs font-semibold text-amber-700">{streak} day streak</span>
+            <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">{streak} day streak</span>
           </div>
         )}
       </div>
@@ -63,12 +67,12 @@ export function Dashboard() {
       {/* Predicted symptoms */}
       {predictedSymptoms.length > 0 && (
         <div className="mx-4">
-          <p className="text-xs text-gray-500 mb-2">Your patterns suggest today may bring:</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Your patterns suggest today may bring:</p>
           <div className="flex flex-wrap gap-1.5">
             {predictedSymptoms.map(({ symptom, probability }) => (
               <span
                 key={symptom}
-                className="text-xs px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 font-medium"
+                className="text-xs px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-300 font-medium"
               >
                 {SYMPTOM_LABELS[symptom]} {Math.round(probability * 100)}%
               </span>
@@ -82,22 +86,44 @@ export function Dashboard() {
       {/* Check-in CTA */}
       {checkInSubmittedToday ? (
         <div className="mx-4 space-y-2">
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl p-4 flex items-center gap-3">
             <span className="text-2xl">✅</span>
-            <div>
-              <div className="font-semibold text-green-800">Check-in logged</div>
-              <div className="text-sm text-green-600">Your data has been recorded for today.</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-green-800 dark:text-green-300">Check-in logged</div>
+              <div className="text-sm text-green-600 dark:text-green-400">Your data has been recorded for today.</div>
             </div>
+            <button
+              onClick={() => setShowEditCheckIn(true)}
+              className="text-xs text-green-700 dark:text-green-400 underline underline-offset-2 shrink-0"
+            >
+              Edit
+            </button>
           </div>
-          {illnessFlagged && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+
+          {/* Illness flagged — with override option */}
+          {illnessFlagged && !todayIllnessOverridden && todaysCheckIn && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4 flex items-start gap-3">
               <span className="text-xl">🤧</span>
-              <div>
-                <div className="font-semibold text-amber-800 text-sm">Possible cold or illness detected</div>
-                <div className="text-xs text-amber-700 mt-1">
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-amber-800 dark:text-amber-300 text-sm">Possible cold or illness detected</div>
+                <div className="text-xs text-amber-700 dark:text-amber-400 mt-1">
                   Pollen is very low but your symptoms are elevated. This check-in has been weighted near-zero in your allergy model so it doesn't skew your personal risk scores.
                 </div>
+                <button
+                  onClick={() => overrideIllness(todaysCheckIn.id)}
+                  className="mt-2 text-xs font-medium text-amber-800 dark:text-amber-300 underline underline-offset-2"
+                >
+                  Override — this was my allergies
+                </button>
               </div>
+            </div>
+          )}
+
+          {/* Override confirmed */}
+          {todayIllnessOverridden && (
+            <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-700 rounded-xl p-3 flex items-center gap-2">
+              <span className="text-base">✓</span>
+              <span className="text-xs text-sky-700 dark:text-sky-300">Overridden — counted as allergies in your model.</span>
             </div>
           )}
         </div>
@@ -110,7 +136,7 @@ export function Dashboard() {
             <span className="text-xl">📋</span>
             <span>Pilot Check-In</span>
           </button>
-          <p className="text-xs text-center text-gray-400 mt-1">Takes 30–90 seconds</p>
+          <p className="text-xs text-center text-gray-400 dark:text-gray-500 mt-1">Takes 30–90 seconds</p>
         </div>
       )}
 
@@ -121,7 +147,7 @@ export function Dashboard() {
         <div className="mx-4">
           <button
             onClick={() => setShowHeatmap(true)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-pilot text-sm font-medium transition-opacity hover:opacity-80"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-700 text-sky-pilot text-sm font-medium transition-opacity hover:opacity-80"
           >
             <span>🗺️</span>
             <span>View live pollen map</span>
@@ -140,6 +166,12 @@ export function Dashboard() {
       {riskScore && <Recommendations category={riskScore.category} />}
 
       {showCheckIn && <CheckInModal onClose={() => setShowCheckIn(false)} />}
+      {showEditCheckIn && todaysCheckIn && (
+        <CheckInModal
+          onClose={() => setShowEditCheckIn(false)}
+          initialCheckIn={todaysCheckIn}
+        />
+      )}
       {showHeatmap && profile?.location && (
         <PollenHeatmap
           lat={profile.location.lat}

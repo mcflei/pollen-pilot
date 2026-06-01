@@ -30,7 +30,7 @@ export function SeveritySlider({ value, onChange }: Props) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <label className="text-sm font-medium text-gray-700">Overall severity</label>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Overall severity</label>
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
           style={{ backgroundColor: color }}
@@ -47,9 +47,9 @@ export function SeveritySlider({ value, onChange }: Props) {
           {LABELS[value]}
         </div>
         <div className="relative">
-          <div className="flex justify-between text-xs text-gray-400 mb-1 px-0.5">
+          <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 mb-1 px-0.5">
             <span>0</span>
-            <span className="text-gray-400 text-xs italic">slide to adjust</span>
+            <span className="text-xs italic">slide to adjust</span>
             <span>10</span>
           </div>
           <input

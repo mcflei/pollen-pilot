@@ -27,7 +27,7 @@ export function SymptomGrid({ selected, onChange }: Props) {
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Symptoms today</label>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Symptoms today</label>
       <div className="grid grid-cols-2 gap-2">
         {SYMPTOMS.map(s => (
           <button
@@ -36,8 +36,8 @@ export function SymptomGrid({ selected, onChange }: Props) {
             onClick={() => toggle(s.key)}
             className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
               selected.includes(s.key)
-                ? 'border-sky-pilot bg-sky-50 text-sky-pilot'
-                : 'border-gray-200 bg-white text-gray-700'
+                ? 'border-sky-pilot bg-sky-50 dark:bg-sky-900/40 text-sky-pilot'
+                : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200'
             }`}
           >
             <span>{s.emoji}</span>
