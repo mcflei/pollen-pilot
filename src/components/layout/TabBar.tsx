@@ -15,12 +15,12 @@ export function TabBar() {
           to={tab.to}
           end={tab.to === '/'}
           className={({ isActive }) =>
-            `flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${
+            `flex-1 flex flex-col items-center gap-1 py-4 text-xs font-medium transition-colors ${
               isActive ? 'text-sky-pilot' : 'text-gray-400'
             }`
           }
         >
-          <span className="text-lg leading-none">{tab.icon}</span>
+          <span className="text-2xl leading-none">{tab.icon}</span>
           <span>{tab.label}</span>
         </NavLink>
       ))}
