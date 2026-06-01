@@ -16,7 +16,7 @@ import {
   isForecastCacheFresh,
   clearPollenCache,
 } from '@/lib/storage';
-import { getPollenData, getMockPollenData, getPollenForecast } from '@/lib/pollenApi';
+import { getPollenData, getMockPollenData, getPollenForecast, reverseGeocode } from '@/lib/pollenApi';
 import type { ForecastDay } from '@/types';
 import { computeRiskScore, selfEvaluate } from '@/lib/models/ensemble';
 import { generateExplanation } from '@/lib/models/explainer';
@@ -161,13 +161,34 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set({ profile, checkIns, onboardingDone, checkInSubmittedToday });
 
-    // 3. Fetch pollen data
+    // 3. Silently refresh location if permission already granted (no popup)
+    let updatedProfile = profile;
+    if (profile && navigator.geolocation) {
+      try {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        if (permission.state === 'granted') {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 })
+          );
+          const { latitude: lat, longitude: lng } = pos.coords;
+          const city = await reverseGeocode(lat, lng);
+          updatedProfile = { ...profile, location: { lat, lng, city } };
+          saveProfile(updatedProfile);
+          set({ profile: updatedProfile });
+          pushProfile(updatedProfile).catch(() => {});
+        }
+      } catch {
+        // Permission denied or timeout — use stored location
+      }
+    }
+
+    // 4. Fetch pollen data
     let snapshot: PollenSnapshot;
-    if (profile?.location) {
+    if (updatedProfile?.location) {
       snapshot = await getPollenData(
-        profile.location.lat,
-        profile.location.lng,
-        profile.location.city
+        updatedProfile.location.lat,
+        updatedProfile.location.lng,
+        updatedProfile.location.city
       );
     } else {
       snapshot = getMockPollenData(today);
@@ -176,12 +197,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     pushPollenSnapshot(snapshot).catch(() => {});
 
     // Fetch forecast — serve from cache if fresh, otherwise fetch in background
-    if (profile?.location) {
+    if (updatedProfile?.location) {
       if (isForecastCacheFresh()) {
         const cached = getForecastCache();
         if (cached) set({ forecast: cached.data as ForecastDay[] });
       } else {
-        getPollenForecast(profile.location.lat, profile.location.lng, profile.location.city)
+        getPollenForecast(updatedProfile.location.lat, updatedProfile.location.lng, updatedProfile.location.city)
           .then(forecast => { set({ forecast }); saveForecastCache(forecast); })
           .catch(() => {});
       }
