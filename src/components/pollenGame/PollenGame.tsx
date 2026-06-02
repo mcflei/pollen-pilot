@@ -27,6 +27,11 @@ const CINFO: Record<CType, { fill: string; border: string; emoji: string; label:
       'Grass pollen peaks between 6-10am on dry, warm mornings.',
       'Grass is the #1 allergen worldwide, affecting 1 in 4 people.',
       "Pollen is a plant's male reproductive cell, essentially plant sperm, carried by wind to fertilize distant flowers.",
+      'Grass pollen season runs from late spring through early summer, peaking in May and June.',
+      'Lawns release more pollen when they go to seed. Mowing regularly keeps local counts lower.',
+      'Bermuda and Timothy grasses are among the most allergenic species.',
+      'Wearing sunglasses outside can reduce eye exposure to pollen by up to 50%.',
+      'Showering before bed removes pollen that collects in your hair and on your skin throughout the day.',
     ],
   },
   tree: {
@@ -36,6 +41,11 @@ const CINFO: Record<CType, { fill: string; border: string; emoji: string; label:
       'Trees pollinate in early spring, often before their leaves even appear.',
       'Tree pollen can travel over 400 miles on the wind.',
       'Oak, birch, and cedar produce the most allergenic pollen of any trees.',
+      'Birch trees release pollen for just 3-4 weeks, but it is one of the most intense allergy seasons.',
+      'Some people allergic to birch pollen also react to apples, peaches, and almonds. This is called oral allergy syndrome.',
+      'Conifers like pine produce massive yellow clouds of pollen but it is rarely allergenic.',
+      'In warmer climates, trees can start releasing pollen as early as January.',
+      'Only the male flowers of trees produce pollen. Female flowers do not.',
     ],
   },
   weed: {
@@ -45,6 +55,11 @@ const CINFO: Record<CType, { fill: string; border: string; emoji: string; label:
       'One ragweed plant releases up to 1 billion pollen grains per season.',
       'Weed pollen peaks in late summer, just after grass and tree seasons end.',
       'Weed pollen is so light it can drift hundreds of miles from its source.',
+      'Ragweed pollen has been detected 400 miles offshore and 2 miles up in the atmosphere.',
+      'Mugwort is the ragweed of Europe, the most common weed allergen there.',
+      'Weed pollination is triggered by decreasing daylight hours in late summer.',
+      "Lamb's quarters, a common roadside weed, produces so much pollen it can coat sidewalks yellow.",
+      'A single season of heavy ragweed exposure can be enough to develop a lasting allergy.',
     ],
   },
 };
@@ -53,8 +68,15 @@ const RAIN_FACTS = [
   'Rain washes pollen from the air. Counts drop up to 90% after a downpour.',
   'Your immune system mistakes harmless pollen for a threat, releasing histamine and causing sneezing, itching, and inflammation.',
   'Pollen grains are 10-100 micrometers wide, invisible to the naked eye but potent enough to trigger full-body reactions.',
-  'Warm, sunny days after cold nights cause plants to release stored pollen all at once. These are the worst days for allergy sufferers.',
+  'Warm, sunny days after cold nights cause plants to release stored pollen all at once, the worst days for allergy sufferers.',
   'Indoor air can have 2x the pollen of outdoor air if windows are left open during high-pollen hours.',
+  '"Hay fever" is a misnomer. It is caused by pollen, not hay, and does not actually cause a fever.',
+  'Allergy medications work best when taken before exposure, not after symptoms have already started.',
+  'Climate change is extending pollen seasons and increasing annual pollen counts worldwide.',
+  'Air purifiers with HEPA filters can remove 99.97% of airborne particles, including pollen.',
+  'Pollen counts are measured and reported as grains per cubic meter of air.',
+  'Athletes often experience worse pollen reactions because they breathe more air during exercise.',
+  'Antihistamines block histamine receptors. They do not stop pollen, just your body\'s reaction to it.',
 ];
 
 type FactEntry = { text: string; emoji: string };
@@ -119,6 +141,8 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
   const [displayScore, setDisplayScore]         = useState(0);
   const [fact, setFact]                         = useState<FactEntry | null>(null);
   const [collectedFacts, setCollectedFacts]     = useState<FactEntry[]>([]);
+  const [highScore, setHighScore]               = useState(() => Number(localStorage.getItem('pp_game_highscore') ?? 0));
+  const [isNewRecord, setIsNewRecord]           = useState(false);
 
   function pickFact(pool: string[]): string {
     const unseen = pool.filter(f => !usedFacts.current.has(f));
@@ -265,19 +289,31 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
       ctx.fillRect(0, 0, (gs.slowFrames / SLOW_FRAMES) * dw, 4);
     }
 
-    // Score — white pill for contrast
-    const scoreText = `${gs.score} pts`;
+    // Score (right) and high score (left) — white pills for contrast
     ctx.font = `bold ${12 * sx}px system-ui, sans-serif`;
-    const scoreW = ctx.measureText(scoreText).width;
-    const spad   = 5 * sx;
-    const pillX  = (LW - 10) * sx - scoreW - spad * 2;
-    rrect(ctx, pillX, 8 * sy, scoreW + spad * 2, 18 * sy, 6 * sx);
+    const spad = 5 * sx;
+
+    const scoreText = `${gs.score} pts`;
+    const scoreW    = ctx.measureText(scoreText).width;
+    rrect(ctx, (LW - 10) * sx - scoreW - spad * 2, 8 * sy, scoreW + spad * 2, 18 * sy, 6 * sx);
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.fill();
     ctx.fillStyle = '#111827';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
     ctx.fillText(scoreText, (LW - 10) * sx - spad, 10 * sy);
+
+    const hs = Number(localStorage.getItem('pp_game_highscore') ?? 0);
+    if (hs > 0) {
+      const hsText = `Best: ${hs}`;
+      const hsW    = ctx.measureText(hsText).width;
+      rrect(ctx, 10 * sx, 8 * sy, hsW + spad * 2, 18 * sy, 6 * sx);
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.fill();
+      ctx.fillStyle = '#6b7280';
+      ctx.textAlign = 'left';
+      ctx.fillText(hsText, 10 * sx + spad, 10 * sy);
+    }
   }, []);
 
   // ── Game loop ──────────────────────────────────────────────────────────────
@@ -301,6 +337,11 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
       draw();
       setDisplayScore(gs.score);
       setCollectedFacts([...gs.collectedFacts]);
+      setIsNewRecord(gs.score > 0 && gs.score > Number(localStorage.getItem('pp_game_highscore') ?? 0));
+      if (gs.score > Number(localStorage.getItem('pp_game_highscore') ?? 0)) {
+        localStorage.setItem('pp_game_highscore', String(gs.score));
+        setHighScore(gs.score);
+      }
       setPhase('dead');
     }
 
@@ -371,6 +412,7 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
     setFact(null);
     setCollectedFacts([]);
     setDisplayScore(0);
+    setIsNewRecord(false);
     setPhase('playing');
   }
 
@@ -467,8 +509,17 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
             <div className="absolute inset-0 bg-gray-900/90 backdrop-blur-sm overflow-y-auto">
               <div className="flex flex-col items-center pt-6 pb-3">
                 <div className="text-4xl mb-2">💨</div>
-                <h3 className="font-bold text-white text-lg mb-0.5">Pollen got you!</h3>
-                <p className="text-sky-300 text-sm mb-4">Score: {displayScore} pts</p>
+                <h3 className="font-bold text-white text-lg mb-2">Pollen got you!</h3>
+                {isNewRecord ? (
+                  <div className="bg-amber-400 text-amber-900 font-bold text-xs px-3 py-1 rounded-full mb-1">
+                    New Record!
+                  </div>
+                ) : null}
+                <p className="text-white text-xl font-bold mb-0.5">{displayScore} pts</p>
+                {!isNewRecord && highScore > 0 && (
+                  <p className="text-gray-400 text-xs mb-3">Best: {highScore} pts</p>
+                )}
+                <div className="mb-4" />
                 <button
                   onClick={startGame}
                   className="bg-sky-500 text-white font-semibold px-8 py-2.5 rounded-xl text-sm hover:bg-sky-600 active:scale-95 transition-all"
