@@ -1,4 +1,5 @@
 import { useAppStore } from '@/store/appStore';
+import { localDateStr, localDateOf } from '@/lib/dateUtils';
 import type { CheckIn } from '@/types';
 
 export function useCheckIns() {
@@ -7,9 +8,9 @@ export function useCheckIns() {
   const checkInSubmittedToday = useAppStore(s => s.checkInSubmittedToday);
 
   const manualCheckIns = checkIns.filter(c => c.entry_type === 'manual');
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateStr();
   const todaysCheckIn: CheckIn | undefined = checkIns.find(
-    c => c.entry_type === 'manual' && c.timestamp.slice(0, 10) === today
+    c => c.entry_type === 'manual' && localDateOf(c.timestamp) === today
   );
 
   return { checkIns, manualCheckIns, submitCheckIn, checkInSubmittedToday, todaysCheckIn };

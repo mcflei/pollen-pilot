@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
@@ -12,12 +12,29 @@ import { Dashboard } from '@/components/dashboard/Dashboard';
 import { InsightsPage } from '@/components/insights/InsightsPage';
 import { SettingsPage } from '@/components/settings/SettingsPage';
 import { AchievementToast } from '@/components/achievements/AchievementToast';
+import { msUntilLocalMidnight } from '@/lib/dateUtils';
 
 export function App() {
   useDarkMode(); // Apply dark class immediately on every mount, not just when Settings tab is visited
   const initApp = useAppStore(s => s.initApp);
+  const resetDailyState = useAppStore(s => s.resetDailyState);
   const onboardingDone = useAppStore(s => s.onboardingDone);
   const isLoading = useAppStore(s => s.isLoading);
+  const midnightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Reset check-in status at local midnight while the app is open
+  useEffect(() => {
+    function scheduleMidnightReset() {
+      midnightTimerRef.current = setTimeout(() => {
+        resetDailyState();
+        scheduleMidnightReset();
+      }, msUntilLocalMidnight());
+    }
+    scheduleMidnightReset();
+    return () => {
+      if (midnightTimerRef.current !== null) clearTimeout(midnightTimerRef.current);
+    };
+  }, [resetDailyState]);
 
   // undefined = still checking session | null = not logged in | User = logged in
   const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);

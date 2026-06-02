@@ -6,6 +6,7 @@ import type {
   ModelEvalResult,
   PollenCacheEntry,
 } from '@/types';
+import { localDateStr, localDateOf, localDateMinusDays } from './dateUtils';
 
 const KEYS = {
   PROFILE: 'pp_profile',
@@ -132,15 +133,15 @@ export function computeStreak(): number {
   const manualDates = new Set(
     checkIns
       .filter(c => c.entry_type === 'manual')
-      .map(c => c.timestamp.slice(0, 10))
+      .map(c => localDateOf(c.timestamp))
   );
   let streak = 0;
   const today = new Date();
+  const todayLocal = localDateStr(today);
   // Start from yesterday if not yet checked in today, else from today
-  const todayStr = today.toISOString().slice(0, 10);
-  const startOffset = manualDates.has(todayStr) ? 0 : 1;
+  const startOffset = manualDates.has(todayLocal) ? 0 : 1;
   for (let i = startOffset; i < 365; i++) {
-    const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const d = localDateStr(localDateMinusDays(today, i));
     if (manualDates.has(d)) {
       streak++;
     } else {

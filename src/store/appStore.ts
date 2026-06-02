@@ -32,13 +32,14 @@ import {
   pushPollenSnapshot,
 } from '@/lib/sync';
 import { supabase } from '@/lib/supabase';
+import { localDateStr, localDateOf, localDateMinusDays } from '@/lib/dateUtils';
 
 function uuidv4(): string {
   return crypto.randomUUID();
 }
 
 function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDateStr();
 }
 
 type CheckInPayload = Omit<CheckIn, 'id' | 'timestamp' | 'entry_type' | 'confidence_weight' | 'pollen_snapshot'>;
@@ -61,6 +62,7 @@ interface AppState {
   updateTodayCheckIn: (id: string, data: CheckInPayload) => Promise<void>;
   overrideIllness: (checkInId: string) => void;
   clearFirstPendingAchievement: () => void;
+  resetDailyState: () => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   refreshPollenData: () => Promise<void>;
   resetData: () => void;
@@ -94,12 +96,13 @@ function autoAssumeHealthyDays(
 ): CheckIn[] {
   if (!profile.assume_healthy_on_miss) return checkIns;
 
-  const existing = new Set(checkIns.map(c => c.timestamp.slice(0, 10)));
+  const existing = new Set(checkIns.map(c => localDateOf(c.timestamp)));
   const created = [...checkIns];
-  const today = todayStr();
+  const now = new Date();
+  const today = localDateStr(now);
 
   for (let i = 1; i <= 30; i++) {
-    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const d = localDateStr(localDateMinusDays(now, i));
     if (d >= today) continue;
     if (existing.has(d)) continue;
 
@@ -164,7 +167,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const onboardingDone = isOnboardingDone();
     const today = todayStr();
     const checkInSubmittedToday = checkIns.some(
-      c => c.entry_type === 'manual' && c.timestamp.slice(0, 10) === today
+      c => c.entry_type === 'manual' && localDateOf(c.timestamp) === today
     );
 
     set({ profile, checkIns, onboardingDone, checkInSubmittedToday });
@@ -332,6 +335,17 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   clearFirstPendingAchievement: () => {
     set(state => ({ pendingAchievements: state.pendingAchievements.slice(1) }));
+  },
+
+  resetDailyState: () => {
+    const { checkIns } = get();
+    const today = localDateStr();
+    const hasCheckInToday = checkIns.some(
+      c => c.entry_type === 'manual' && localDateOf(c.timestamp) === today
+    );
+    if (!hasCheckInToday) {
+      set({ checkInSubmittedToday: false, lastCheckInIllnessFlagged: false });
+    }
   },
 
   updateProfile: (updates) => {

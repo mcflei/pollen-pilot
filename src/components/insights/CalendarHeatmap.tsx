@@ -1,4 +1,5 @@
 import type { CheckIn } from '@/types';
+import { localDateStr, localDateOf, localDateMinusDays } from '@/lib/dateUtils';
 
 const SEVERITY_COLORS = [
   'bg-green-200',   // 0-1
@@ -38,13 +39,14 @@ interface Props {
 
 export function CalendarHeatmap({ checkIns }: Props) {
   const today = new Date();
+  const todayStr = localDateStr(today);
   const days: { date: string; checkIn: CheckIn | null; pollenIndex: number }[] = [];
 
   for (let i = 59; i >= 0; i--) {
-    const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-    const dateStr = d.toISOString().slice(0, 10);
+    const d = localDateMinusDays(today, i);
+    const dateStr = localDateStr(d);
     const checkIn = checkIns
-      .filter(c => c.timestamp.slice(0, 10) === dateStr && c.entry_type === 'manual')
+      .filter(c => localDateOf(c.timestamp) === dateStr && c.entry_type === 'manual')
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0] ?? null;
     const snap = checkIn?.pollen_snapshot;
     const pollenIndex = snap ? Math.round((snap.grass_index + snap.tree_index) / 2) : 0;
@@ -55,7 +57,7 @@ export function CalendarHeatmap({ checkIns }: Props) {
     <div>
       <div className="flex flex-wrap gap-1">
         {days.map(({ date, checkIn, pollenIndex }) => {
-            const isToday = date === today.toISOString().slice(0, 10);
+          const isToday = date === todayStr;
           const color = checkIn
             ? severityColor(checkIn.severity)
             : pollenColor(pollenIndex);
