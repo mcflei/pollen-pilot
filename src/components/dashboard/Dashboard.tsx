@@ -13,6 +13,7 @@ import { ForecastStrip } from './ForecastStrip';
 import { BestDaysView } from './BestDaysView';
 import { PollenHeatmap } from './PollenHeatmap';
 import { CheckInModal } from '@/components/checkin/CheckInModal';
+import { PollenGame } from '@/components/pollenGame/PollenGame';
 
 const SYMPTOM_LABELS: Record<string, string> = {
   sneezing: 'Sneezing',
@@ -37,6 +38,7 @@ export function Dashboard() {
   const [showCheckIn, setShowCheckIn] = useState(false);
   const [showEditCheckIn, setShowEditCheckIn] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(false);
+  const [showGame, setShowGame] = useState(false);
 
   const predictedSymptoms = riskScore?.predicted_symptoms ?? [];
   const streak = insights.streak_days;
@@ -140,6 +142,30 @@ export function Dashboard() {
         </div>
       )}
 
+      {/* Pollen mini-game — shown between check-in 4 and 7 while ML model warms up */}
+      {manualCheckIns.length >= 4 && manualCheckIns.length < 7 && (
+        <div className="mx-4 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-900/20 dark:to-blue-900/20 border border-sky-200 dark:border-sky-800 rounded-2xl p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-2xl">✈️</span>
+            <div>
+              <div className="font-semibold text-sky-900 dark:text-sky-100 text-sm">While you wait...</div>
+              <div className="text-xs text-sky-600 dark:text-sky-400">
+                {7 - manualCheckIns.length} more check-in{7 - manualCheckIns.length !== 1 ? 's' : ''} until your ML model activates
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">
+            Play a quick game to learn what causes pollen — and what the weather has to do with your symptoms.
+          </p>
+          <button
+            onClick={() => setShowGame(true)}
+            className="w-full bg-sky-500 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-sky-600 active:scale-[0.98] transition-all"
+          >
+            🎮 Play: Pollen Pilot
+          </button>
+        </div>
+      )}
+
       {pollenData && <PollenRadar data={pollenData} />}
 
       {/* Pollen map button */}
@@ -165,6 +191,12 @@ export function Dashboard() {
 
       {riskScore && <Recommendations category={riskScore.category} />}
 
+      {showGame && (
+        <PollenGame
+          onClose={() => setShowGame(false)}
+          checkInsRemaining={7 - manualCheckIns.length}
+        />
+      )}
       {showCheckIn && <CheckInModal onClose={() => setShowCheckIn(false)} />}
       {showEditCheckIn && todaysCheckIn && (
         <CheckInModal
