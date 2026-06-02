@@ -142,8 +142,8 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Pollen mini-game — shown between check-in 4 and 7 while ML model warms up */}
-      {manualCheckIns.length >= 4 && manualCheckIns.length < 7 && (
+      {/* Pollen mini-game — always visible */}
+      {manualCheckIns.length < 7 ? (
         <div className="mx-4 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-900/20 dark:to-blue-900/20 border border-sky-200 dark:border-sky-800 rounded-2xl p-4">
           <div className="flex items-center gap-3 mb-2">
             <span className="text-2xl">✈️</span>
@@ -155,13 +155,23 @@ export function Dashboard() {
             </div>
           </div>
           <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">
-            Play a quick game to learn what causes pollen — and what the weather has to do with your symptoms.
+            Play a quick game to learn what causes pollen and what the weather has to do with your symptoms.
           </p>
           <button
             onClick={() => setShowGame(true)}
             className="w-full bg-sky-500 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-sky-600 active:scale-[0.98] transition-all"
           >
             🎮 Play: Pollen Pilot
+          </button>
+        </div>
+      ) : (
+        <div className="mx-4">
+          <button
+            onClick={() => setShowGame(true)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-700 text-sky-700 dark:text-sky-300 text-sm font-medium hover:opacity-80 transition-opacity"
+          >
+            <span>🎮</span>
+            <span>Play: Pollen Pilot</span>
           </button>
         </div>
       )}

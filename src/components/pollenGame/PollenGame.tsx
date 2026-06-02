@@ -5,57 +5,59 @@ const LW = 360;
 const LH = 340;
 const GROUND_H = 32;
 const PLANE_X = 72;
-const PLANE_R = 11;        // hitbox radius — smaller than visual for forgiveness
+const PLANE_R = 11;
 const GRAVITY = 0.36;
-const JUMP_VEL = -8.8;
+const JUMP_VEL = -6.0;
 const GAP_H = 118;
 const CLOUD_W = 70;
 const INIT_SPEED = 2.3;
 const MAX_SPEED = 4.8;
 const CLOUD_SPACING = 230;
 const SLOW_FRAMES = 100;
-const DROP_R = 14;         // raindrop collect radius
+const DROP_R = 14;
 
 type CType = 'grass' | 'tree' | 'weed';
 const CTYPES: CType[] = ['grass', 'tree', 'weed'];
 
-const CINFO: Record<CType, { fill: string; border: string; text: string; emoji: string; label: string; facts: string[] }> = {
+const CINFO: Record<CType, { fill: string; border: string; emoji: string; label: string; facts: string[] }> = {
   grass: {
-    fill: '#86efac', border: '#16a34a', text: '#14532d',
+    fill: '#86efac', border: '#16a34a',
     emoji: '🌿', label: 'Grass',
     facts: [
-      'Grass pollen peaks between 6–10am on dry, warm mornings.',
-      'Grass is the #1 allergen worldwide — affecting 1 in 4 people.',
-      "Pollen is a plant's male reproductive cell — essentially plant sperm — carried by wind to fertilize distant flowers.",
+      'Grass pollen peaks between 6-10am on dry, warm mornings.',
+      'Grass is the #1 allergen worldwide, affecting 1 in 4 people.',
+      "Pollen is a plant's male reproductive cell, essentially plant sperm, carried by wind to fertilize distant flowers.",
     ],
   },
   tree: {
-    fill: '#6ee7b7', border: '#0d9488', text: '#134e4a',
+    fill: '#6ee7b7', border: '#0d9488',
     emoji: '🌳', label: 'Tree',
     facts: [
-      'Trees pollinate in early spring — often before their leaves even appear.',
+      'Trees pollinate in early spring, often before their leaves even appear.',
       'Tree pollen can travel over 400 miles on the wind.',
       'Oak, birch, and cedar produce the most allergenic pollen of any trees.',
     ],
   },
   weed: {
-    fill: '#fde68a', border: '#d97706', text: '#78350f',
+    fill: '#fde68a', border: '#d97706',
     emoji: '🌾', label: 'Weed',
     facts: [
       'One ragweed plant releases up to 1 billion pollen grains per season.',
-      'Weed pollen peaks in late summer — just after grass and tree seasons end.',
+      'Weed pollen peaks in late summer, just after grass and tree seasons end.',
       'Weed pollen is so light it can drift hundreds of miles from its source.',
     ],
   },
 };
 
 const RAIN_FACTS = [
-  'Rain washes pollen from the air — counts drop up to 90% after a downpour.',
+  'Rain washes pollen from the air. Counts drop up to 90% after a downpour.',
   'Your immune system mistakes harmless pollen for a threat, releasing histamine and causing sneezing, itching, and inflammation.',
-  'Pollen grains are 10–100 micrometers wide — invisible to the naked eye but potent enough to trigger full-body reactions.',
-  'Warm, sunny days after cold nights cause plants to release stored pollen all at once — these are the worst days.',
-  'Indoor air can have 2× the pollen of outdoor air if windows are left open during high-pollen hours.',
+  'Pollen grains are 10-100 micrometers wide, invisible to the naked eye but potent enough to trigger full-body reactions.',
+  'Warm, sunny days after cold nights cause plants to release stored pollen all at once. These are the worst days for allergy sufferers.',
+  'Indoor air can have 2x the pollen of outdoor air if windows are left open during high-pollen hours.',
 ];
+
+type FactEntry = { text: string; emoji: string };
 
 interface Cloud { id: number; x: number; cy: number; type: CType; passed: boolean; }
 interface Drop  { id: number; x: number; y: number; }
@@ -66,6 +68,7 @@ interface GS {
   nextId: number; slowFrames: number;
   distSinceCloud: number;
   dead: boolean; bgX: number;
+  collectedFacts: FactEntry[];
 }
 
 function freshState(): GS {
@@ -76,6 +79,7 @@ function freshState(): GS {
     nextId: 1, slowFrames: 0,
     distSinceCloud: CLOUD_SPACING * 0.55,
     dead: false, bgX: 0,
+    collectedFacts: [],
   };
 }
 
@@ -105,15 +109,16 @@ interface Props {
 }
 
 export function PollenGame({ onClose, checkInsRemaining }: Props) {
-  const canvasRef   = useRef<HTMLCanvasElement>(null);
-  const gsRef       = useRef<GS>(freshState());
-  const rafRef      = useRef<number>(0);
-  const usedFacts   = useRef(new Set<string>());
-  const factTimer   = useRef<ReturnType<typeof setTimeout>>();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const gsRef     = useRef<GS>(freshState());
+  const rafRef    = useRef<number>(0);
+  const usedFacts = useRef(new Set<string>());
+  const factTimer = useRef<ReturnType<typeof setTimeout>>();
 
-  const [phase, setPhase]               = useState<Phase>('intro');
-  const [displayScore, setDisplayScore] = useState(0);
-  const [fact, setFact]                 = useState<{ text: string; emoji: string } | null>(null);
+  const [phase, setPhase]                       = useState<Phase>('intro');
+  const [displayScore, setDisplayScore]         = useState(0);
+  const [fact, setFact]                         = useState<FactEntry | null>(null);
+  const [collectedFacts, setCollectedFacts]     = useState<FactEntry[]>([]);
 
   function pickFact(pool: string[]): string {
     const unseen = pool.filter(f => !usedFacts.current.has(f));
@@ -126,14 +131,14 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
   const showFact = useCallback((text: string, emoji: string) => {
     clearTimeout(factTimer.current);
     setFact({ text, emoji });
+    gsRef.current.collectedFacts.push({ text, emoji });
     factTimer.current = setTimeout(() => setFact(null), 3800);
   }, []);
 
-  // Stable ref so RAF loop can call latest versions without becoming a dep
   const cbRef = useRef({ pickFact, showFact });
   useEffect(() => { cbRef.current = { pickFact, showFact }; });
 
-  // ── Canvas draw (reads gsRef, never causes re-render) ─────────────────────
+  // ── Canvas draw ────────────────────────────────────────────────────────────
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -154,14 +159,14 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
 
     ctx.clearRect(0, 0, dw, dh);
 
-    // Sky
+    // Sky gradient
     const skyGrad = ctx.createLinearGradient(0, 0, 0, dh);
     skyGrad.addColorStop(0, '#bae6fd');
     skyGrad.addColorStop(1, '#f0f9ff');
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, dw, dh);
 
-    // Decorative parallax clouds (half speed)
+    // Decorative parallax clouds
     const bgDefs = [
       { lx: 20,  ly: 45,  w: 90, h: 28 },
       { lx: 180, ly: 32,  w: 75, h: 22 },
@@ -185,11 +190,11 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
 
     // Pollen obstacle clouds
     for (const c of gs.clouds) {
-      const info = CINFO[c.type];
-      const cx     = c.x * sx;
-      const cw     = CLOUD_W * sx;
-      const gapTop = (c.cy - GAP_H / 2) * sy;
-      const gapBot = (c.cy + GAP_H / 2) * sy;
+      const info    = CINFO[c.type];
+      const cx      = c.x * sx;
+      const cw      = CLOUD_W * sx;
+      const gapTop  = (c.cy - GAP_H / 2) * sy;
+      const gapBot  = (c.cy + GAP_H / 2) * sy;
       const groundY = (LH - GROUND_H) * sy;
 
       // Top block
@@ -200,15 +205,10 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
         ctx.strokeStyle = info.border;
         ctx.lineWidth = 1.5 * sx;
         ctx.stroke();
-        // Pollen particle dots
         ctx.fillStyle = info.border + '90';
         for (let p = 0; p < 4; p++) {
           ctx.beginPath();
-          ctx.arc(
-            cx + (10 + p * 16) * sx,
-            Math.min(gapTop * 0.5 + p * 9 * sy, gapTop - 5 * sy),
-            2.5 * sx, 0, Math.PI * 2,
-          );
+          ctx.arc(cx + (10 + p * 16) * sx, Math.min(gapTop * 0.5 + p * 9 * sy, gapTop - 5 * sy), 2.5 * sx, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -223,14 +223,21 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
         ctx.stroke();
       }
 
-      // Label above top block
+      // Label above top block — white pill for contrast
       const labelY = gapTop - 5 * sy;
-      if (labelY > 12 * sy) {
+      if (labelY > 14 * sy) {
+        const labelText = `${info.emoji} ${info.label}`;
         ctx.font = `bold ${11 * sx}px system-ui, sans-serif`;
-        ctx.fillStyle = info.text;
+        const tw   = ctx.measureText(labelText).width;
+        const lpad = 5 * sx;
+        const lh   = 17 * sy;
+        rrect(ctx, cx + cw / 2 - tw / 2 - lpad, labelY - lh, tw + lpad * 2, lh, 5 * sx);
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.fill();
+        ctx.fillStyle = '#111827';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(`${info.emoji} ${info.label}`, cx + cw / 2, labelY);
+        ctx.fillText(labelText, cx + cw / 2, labelY - 2 * sy);
       }
     }
 
@@ -252,23 +259,28 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
     ctx.fillText('✈️', 0, 0);
     ctx.restore();
 
-    // Slow-mo progress bar at top
+    // Slow-mo progress bar
     if (gs.slowFrames > 0) {
       ctx.fillStyle = 'rgba(56,189,248,0.50)';
       ctx.fillRect(0, 0, (gs.slowFrames / SLOW_FRAMES) * dw, 4);
     }
 
-    // Score
+    // Score — white pill for contrast
+    const scoreText = `${gs.score} pts`;
+    ctx.font = `bold ${12 * sx}px system-ui, sans-serif`;
+    const scoreW = ctx.measureText(scoreText).width;
+    const spad   = 5 * sx;
+    const pillX  = (LW - 10) * sx - scoreW - spad * 2;
+    rrect(ctx, pillX, 8 * sy, scoreW + spad * 2, 18 * sy, 6 * sx);
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.fill();
+    ctx.fillStyle = '#111827';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = 'rgba(12,74,110,0.85)';
-    ctx.font = `bold ${13 * sx}px system-ui, sans-serif`;
-    ctx.fillText(`${gs.score}`, (LW - 10) * sx, 10 * sy);
-    ctx.font = `${9 * sx}px system-ui, sans-serif`;
-    ctx.fillText('pts', (LW - 10) * sx, 26 * sy);
+    ctx.fillText(scoreText, (LW - 10) * sx - spad, 10 * sy);
   }, []);
 
-  // ── Game loop (runs in RAF, never re-renders React except at phase changes) ─
+  // ── Game loop ──────────────────────────────────────────────────────────────
   const loop = useCallback(() => {
     const gs = gsRef.current;
     if (gs.dead) { draw(); return; }
@@ -283,49 +295,42 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
     gs.frame++;
     if (gs.frame % 4 === 0) gs.score++;
 
-    // Ceiling / ground death
-    if (gs.y - PLANE_R <= 0 || gs.y + PLANE_R >= LH - GROUND_H) {
-      gs.y   = Math.max(PLANE_R, Math.min(LH - GROUND_H - PLANE_R, gs.y));
+    function die() {
+      gs.y    = Math.max(PLANE_R, Math.min(LH - GROUND_H - PLANE_R, gs.y));
       gs.dead = true;
       draw();
-      setPhase('dead');
       setDisplayScore(gs.score);
-      return;
+      setCollectedFacts([...gs.collectedFacts]);
+      setPhase('dead');
     }
 
-    // Spawn cloud based on distance traveled
+    if (gs.y - PLANE_R <= 0 || gs.y + PLANE_R >= LH - GROUND_H) { die(); return; }
+
+    // Spawn cloud
     gs.distSinceCloud += gs.speed * slow;
     if (gs.distSinceCloud >= CLOUD_SPACING) {
       gs.distSinceCloud = 0;
-      const type = CTYPES[Math.floor(Math.random() * CTYPES.length)];
+      const type  = CTYPES[Math.floor(Math.random() * CTYPES.length)];
       const minCY = GAP_H / 2 + 20;
       const maxCY = LH - GROUND_H - GAP_H / 2 - 10;
-      const cy = rnd(minCY, maxCY);
+      const cy    = rnd(minCY, maxCY);
       gs.clouds.push({ id: gs.nextId++, x: LW + CLOUD_W / 2, cy, type, passed: false });
       if (Math.random() < 0.45) {
         gs.drops.push({ id: gs.nextId++, x: LW + CLOUD_W / 2, y: cy });
       }
     }
 
-    // Move clouds, check collision and gap passing
+    // Move clouds + collision
     for (const c of gs.clouds) {
       c.x -= gs.speed * slow;
-
       const withinX = PLANE_X + PLANE_R > c.x + 3 && PLANE_X - PLANE_R < c.x + CLOUD_W - 3;
       if (withinX) {
         const gapTop = c.cy - GAP_H / 2;
         const gapBot = c.cy + GAP_H / 2;
-        if (gs.y - PLANE_R < gapTop || gs.y + PLANE_R > gapBot) {
-          gs.dead = true;
-          draw();
-          setPhase('dead');
-          setDisplayScore(gs.score);
-          return;
-        }
+        if (gs.y - PLANE_R < gapTop || gs.y + PLANE_R > gapBot) { die(); return; }
       }
-
       if (!c.passed && c.x + CLOUD_W < PLANE_X - PLANE_R) {
-        c.passed = true;
+        c.passed  = true;
         gs.score += 10;
         const info = CINFO[c.type];
         cbRef.current.showFact(cbRef.current.pickFact(info.facts), info.emoji);
@@ -333,13 +338,13 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
     }
     gs.clouds = gs.clouds.filter(c => c.x + CLOUD_W > -20);
 
-    // Move drops, check collection
+    // Move drops + collection
     for (const d of gs.drops) {
       d.x -= gs.speed * slow;
       const dx = PLANE_X - d.x;
       const dy = gs.y - d.y;
       if (Math.sqrt(dx * dx + dy * dy) < PLANE_R + DROP_R) {
-        gs.drops     = gs.drops.filter(dr => dr.id !== d.id);
+        gs.drops      = gs.drops.filter(dr => dr.id !== d.id);
         gs.slowFrames = SLOW_FRAMES;
         gs.score     += 8;
         cbRef.current.showFact(cbRef.current.pickFact(RAIN_FACTS), '🌧️');
@@ -364,11 +369,11 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
     usedFacts.current.clear();
     clearTimeout(factTimer.current);
     setFact(null);
+    setCollectedFacts([]);
     setDisplayScore(0);
     setPhase('playing');
   }
 
-  // RAF lifecycle
   useEffect(() => {
     if (phase === 'playing') {
       rafRef.current = requestAnimationFrame(loop);
@@ -376,7 +381,6 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
     }
   }, [phase, loop]);
 
-  // Static draw for non-playing phases
   useEffect(() => {
     if (phase !== 'playing') {
       const id = requestAnimationFrame(draw);
@@ -384,20 +388,15 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
     }
   }, [phase, draw]);
 
-  // Keyboard support on desktop
   useEffect(() => {
     if (phase !== 'playing') return;
     function onKey(e: KeyboardEvent) {
-      if (e.code === 'Space' || e.code === 'ArrowUp') {
-        e.preventDefault();
-        jump();
-      }
+      if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); jump(); }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [phase, jump]);
 
-  // Cleanup
   useEffect(() => () => {
     cancelAnimationFrame(rafRef.current);
     clearTimeout(factTimer.current);
@@ -411,9 +410,11 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
         <div className="flex items-center justify-between px-4 py-3 bg-sky-50 dark:bg-sky-900/30 border-b border-sky-100 dark:border-sky-800">
           <div>
             <div className="font-bold text-sky-900 dark:text-sky-100 text-sm">✈️ Pollen Pilot: The Game</div>
-            <div className="text-xs text-sky-600 dark:text-sky-400">
-              {checkInsRemaining} check-in{checkInsRemaining !== 1 ? 's' : ''} until your ML model activates
-            </div>
+            {checkInsRemaining > 0 && (
+              <div className="text-xs text-sky-600 dark:text-sky-400">
+                {checkInsRemaining} check-in{checkInsRemaining !== 1 ? 's' : ''} until your ML model activates
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -433,15 +434,15 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
             onTouchStart={e => { e.preventDefault(); if (phase === 'playing') jump(); }}
           />
 
-          {/* Educational fact card */}
+          {/* Fact card during play */}
           {fact && (
-            <div className="absolute bottom-3 left-3 right-3 bg-white/96 dark:bg-gray-800/96 backdrop-blur-sm rounded-xl p-3 shadow-lg border border-sky-100 dark:border-sky-800 flex gap-2.5 items-start pointer-events-none">
+            <div className="absolute bottom-3 left-3 right-3 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-xl border border-gray-200 dark:border-gray-600 flex gap-2.5 items-start pointer-events-none">
               <span className="text-xl leading-none mt-0.5 shrink-0">{fact.emoji}</span>
-              <p className="text-xs text-gray-700 dark:text-gray-200 leading-relaxed">{fact.text}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white leading-snug">{fact.text}</p>
             </div>
           )}
 
-          {/* Intro overlay */}
+          {/* Intro */}
           {phase === 'intro' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-sky-50/92 dark:bg-gray-900/92 backdrop-blur-sm">
               <div className="text-5xl mb-3">✈️</div>
@@ -461,23 +462,41 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
             </div>
           )}
 
-          {/* Game over overlay */}
+          {/* Game over — scrollable, shows collected facts */}
           {phase === 'dead' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/82 backdrop-blur-sm">
-              <div className="text-4xl mb-2">💨</div>
-              <h3 className="font-bold text-white text-lg mb-0.5">Pollen got you!</h3>
-              <p className="text-sky-300 text-sm mb-5">Score: {displayScore} pts</p>
-              <button
-                onClick={startGame}
-                className="bg-sky-500 text-white font-semibold px-8 py-2.5 rounded-xl text-sm hover:bg-sky-600 active:scale-95 transition-all"
-              >
-                Try Again
-              </button>
+            <div className="absolute inset-0 bg-gray-900/90 backdrop-blur-sm overflow-y-auto">
+              <div className="flex flex-col items-center pt-6 pb-3">
+                <div className="text-4xl mb-2">💨</div>
+                <h3 className="font-bold text-white text-lg mb-0.5">Pollen got you!</h3>
+                <p className="text-sky-300 text-sm mb-4">Score: {displayScore} pts</p>
+                <button
+                  onClick={startGame}
+                  className="bg-sky-500 text-white font-semibold px-8 py-2.5 rounded-xl text-sm hover:bg-sky-600 active:scale-95 transition-all"
+                >
+                  Try Again
+                </button>
+              </div>
+
+              {collectedFacts.length > 0 && (
+                <div className="px-3 pb-5">
+                  <div className="text-xs font-semibold text-sky-400 uppercase tracking-wide mb-2 text-center">
+                    What you learned
+                  </div>
+                  <div className="space-y-2">
+                    {collectedFacts.map((f, i) => (
+                      <div key={i} className="bg-white/10 rounded-xl p-2.5 flex gap-2.5 items-start">
+                        <span className="text-lg leading-none shrink-0 mt-0.5">{f.emoji}</span>
+                        <p className="text-xs text-white/90 leading-relaxed">{f.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Bottom hint */}
+        {/* Footer hint */}
         <div className="py-2.5 px-4 text-center text-xs text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-800">
           {phase === 'playing'
             ? 'Tap / Space to flap ↑  •  Collect 💧 to slow down'
