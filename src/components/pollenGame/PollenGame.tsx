@@ -7,7 +7,7 @@ const GROUND_H = 32;
 const PLANE_X = 72;
 const PLANE_R = 11;
 const GRAVITY = 0.36;
-const JUMP_VEL = -6.0;
+const JUMP_VEL = -4.5;
 const GAP_H = 118;
 const CLOUD_W = 70;
 const INIT_SPEED = 2.3;
@@ -403,11 +403,11 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-gray-900">
+      <div className="flex flex-col flex-1 min-h-0">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-sky-50 dark:bg-sky-900/30 border-b border-sky-100 dark:border-sky-800">
+        <div className="flex items-center justify-between px-4 py-3 bg-sky-50 dark:bg-sky-900/30 border-b border-sky-100 dark:border-sky-800 shrink-0">
           <div>
             <div className="font-bold text-sky-900 dark:text-sky-100 text-sm">✈️ Pollen Pilot: The Game</div>
             {checkInsRemaining > 0 && (
@@ -424,8 +424,8 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
           </button>
         </div>
 
-        {/* Canvas area */}
-        <div className="relative bg-sky-100 dark:bg-sky-950" style={{ height: 320 }}>
+        {/* Canvas area — fills all remaining screen space */}
+        <div className="relative flex-1 min-h-0 bg-sky-100 dark:bg-sky-950">
           <canvas
             ref={canvasRef}
             className="w-full h-full"
@@ -497,12 +497,12 @@ export function PollenGame({ onClose, checkInsRemaining }: Props) {
         </div>
 
         {/* Footer hint */}
-        <div className="py-2.5 px-4 text-center text-xs text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-800">
+        <div className="py-2.5 px-4 text-center text-xs text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-800 shrink-0">
           {phase === 'playing'
             ? 'Tap / Space to flap ↑  •  Collect 💧 to slow down'
             : 'Each gap you clear teaches you something new 🌿'}
         </div>
-      </div>
+    </div>
     </div>
   );
 }
