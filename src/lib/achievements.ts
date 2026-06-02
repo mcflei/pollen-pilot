@@ -1,5 +1,5 @@
 import type { CheckIn } from '@/types';
-import { computeStreak } from './storage';
+import { computeStreak, getLongestStreak } from './storage';
 
 export interface Achievement {
   id: string;
@@ -29,6 +29,7 @@ export function markAchievementsSeen(ids: string[]): void {
 export function computeAchievements(checkIns: CheckIn[]): Achievement[] {
   const manual = checkIns.filter(c => c.entry_type === 'manual');
   const streak = computeStreak();
+  const longestStreak = getLongestStreak();
   const seen = getSeenIds();
 
   const definitions: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
@@ -39,6 +40,14 @@ export function computeAchievements(checkIns: CheckIn[]): Achievement[] {
     { id: 'streak_3',         icon: '🔥', name: 'Co-pilot',            description: '3-day check-in streak' },
     { id: 'streak_7',         icon: '🧭', name: 'Navigator',           description: '7-day check-in streak' },
     { id: 'streak_30',        icon: '🏆', name: 'Ace Pilot',           description: '30-day check-in streak' },
+    {
+      id: 'longest_streak',
+      icon: '🏅',
+      name: longestStreak > 0 ? `${longestStreak}-Day Personal Best` : 'Personal Best Streak',
+      description: longestStreak > 0
+        ? `Your all-time longest check-in streak — ${longestStreak} day${longestStreak === 1 ? '' : 's'} in a row.`
+        : 'Check in on consecutive days to set your personal record.',
+    },
     { id: 'medication_logged',icon: '💊', name: 'Medicated',           description: 'Logged a medication during a check-in' },
     { id: 'survived_high',    icon: '⛈️', name: 'Storm Rider',         description: 'Checked in on a high-pollen day with severity ≤ 4' },
     { id: 'clear_day',        icon: '☀️', name: 'Clear Skies',         description: 'Checked in with severity 0–1 on a good pollen day' },
@@ -54,6 +63,7 @@ export function computeAchievements(checkIns: CheckIn[]): Achievement[] {
       case 'streak_3':          return streak >= 3;
       case 'streak_7':          return streak >= 7;
       case 'streak_30':         return streak >= 30;
+      case 'longest_streak':    return longestStreak > 0;
       case 'medication_logged': return manual.some(c => c.medications.length > 0);
       case 'survived_high':     return manual.some(c => {
         const snap = c.pollen_snapshot;
@@ -71,6 +81,9 @@ export function computeAchievements(checkIns: CheckIn[]): Achievement[] {
   return definitions.map(def => ({
     ...def,
     unlocked: isUnlocked(def.id),
-    unlockedAt: isUnlocked(def.id) && !seen.has(def.id) ? new Date().toISOString() : undefined,
+    // longest_streak is handled via toast — suppress the grid "New!" badge
+    unlockedAt: isUnlocked(def.id) && !seen.has(def.id) && def.id !== 'longest_streak'
+      ? new Date().toISOString()
+      : undefined,
   }));
 }

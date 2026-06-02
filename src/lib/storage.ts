@@ -16,6 +16,7 @@ const KEYS = {
   MODEL_WEIGHTS: 'pp_model_weights',
   MODEL_EVALS: 'pp_model_evals',
   ONBOARDING_DONE: 'pp_onboarding_done',
+  LONGEST_STREAK: 'pp_longest_streak',
 } as const;
 
 function read<T>(key: string): T | null {
@@ -196,6 +197,14 @@ export function exportAllDataJSON(): string {
     model_evals: getModelEvals(),
     exported_at: new Date().toISOString(),
   }, null, 2);
+}
+
+export function getLongestStreak(): number {
+  return Number(localStorage.getItem(KEYS.LONGEST_STREAK) ?? 0);
+}
+
+export function saveLongestStreak(n: number): void {
+  localStorage.setItem(KEYS.LONGEST_STREAK, String(n));
 }
 
 export function resetAllData(): void {

@@ -16,6 +16,9 @@ import {
   saveForecastCache,
   isForecastCacheFresh,
   clearPollenCache,
+  computeStreak,
+  getLongestStreak,
+  saveLongestStreak,
 } from '@/lib/storage';
 import { computeAchievements, markAchievementsSeen } from '@/lib/achievements';
 import type { Achievement } from '@/lib/achievements';
@@ -273,12 +276,32 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ checkIns: allCheckIns, checkInSubmittedToday: true, lastCheckInIllnessFlagged: illnessFlagged });
 
     // Detect newly unlocked achievements (post-append, so streak is updated)
+    // Exclude longest_streak — handled separately below to support repeated updates
     const postAchievements = computeAchievements(allCheckIns);
     const preUnlocked = new Set(preAchievements.filter(a => a.unlocked).map(a => a.id));
-    const newlyUnlocked = postAchievements.filter(a => a.unlocked && !preUnlocked.has(a.id));
+    const newlyUnlocked = postAchievements.filter(
+      a => a.unlocked && !preUnlocked.has(a.id) && a.id !== 'longest_streak'
+    );
     if (newlyUnlocked.length > 0) {
       markAchievementsSeen(newlyUnlocked.map(a => a.id));
       set(state => ({ pendingAchievements: [...state.pendingAchievements, ...newlyUnlocked] }));
+    }
+
+    // Personal best streak — fires every time the all-time record is broken
+    const currentStreak = computeStreak();
+    const prevLongest = getLongestStreak();
+    if (currentStreak > prevLongest) {
+      saveLongestStreak(currentStreak);
+      markAchievementsSeen(['longest_streak']); // toast is the feedback; no "New!" in grid
+      const streakAchievement: Achievement = {
+        id: 'longest_streak',
+        icon: '🏅',
+        name: `${currentStreak}-Day Personal Best!`,
+        description: `Your longest check-in streak ever — ${currentStreak} day${currentStreak === 1 ? '' : 's'} in a row.`,
+        unlocked: true,
+        unlockedAt: new Date().toISOString(),
+      };
+      set(state => ({ pendingAchievements: [...state.pendingAchievements, streakAchievement] }));
     }
 
     pushCheckIn(checkIn).catch(() => {});
