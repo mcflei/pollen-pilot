@@ -34,11 +34,11 @@ export function OnboardingSlide2({ onNext }: Props) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen px-6 py-12 bg-white">
+    <div className="flex flex-col min-h-screen px-6 py-12 bg-white dark:bg-gray-900">
       <div className="flex-1">
         <div className="text-4xl mb-4">📅</div>
-        <h2 className="font-lora text-2xl font-bold text-gray-900 mb-2">Check-in settings</h2>
-        <p className="text-gray-500 text-sm mb-6">
+        <h2 className="font-lora text-2xl font-bold text-gray-900 dark:text-white mb-2">Check-in settings</h2>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
           How often would you like to log your symptoms?
         </p>
 
@@ -49,21 +49,21 @@ export function OnboardingSlide2({ onNext }: Props) {
               onClick={() => setFrequency(f.value)}
               className={`w-full text-left p-4 rounded-xl border transition-all ${
                 frequency === f.value
-                  ? 'border-sky-pilot bg-sky-50'
-                  : 'border-gray-200 bg-white'
+                  ? 'border-sky-pilot bg-sky-50 dark:bg-sky-900/30'
+                  : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
               }`}
             >
-              <div className={`font-semibold ${frequency === f.value ? 'text-sky-pilot' : 'text-gray-900'}`}>
+              <div className={`font-semibold ${frequency === f.value ? 'text-sky-pilot' : 'text-gray-900 dark:text-white'}`}>
                 {f.label}
               </div>
-              <div className="text-xs text-gray-500">{f.sub}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{f.sub}</div>
             </button>
           ))}
         </div>
 
         {frequency === 'custom' && (
-          <div className="mb-6 p-4 bg-gray-50 rounded-xl">
-            <div className="font-medium text-sm text-gray-700 mb-3">Custom check-in times</div>
+          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+            <div className="font-medium text-sm text-gray-700 dark:text-gray-200 mb-3">Custom check-in times</div>
             <div className="space-y-2">
               {customTimes.map((t, i) => (
                 <div key={i} className="flex items-center gap-2">
@@ -71,7 +71,7 @@ export function OnboardingSlide2({ onNext }: Props) {
                     type="time"
                     value={t}
                     onChange={e => updateTime(i, e.target.value)}
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                    className="flex-1 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                   {customTimes.length > 1 && (
                     <button onClick={() => removeTime(i)} className="text-gray-400 hover:text-red-500 text-xl leading-none">×</button>
@@ -87,22 +87,22 @@ export function OnboardingSlide2({ onNext }: Props) {
           </div>
         )}
 
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4 mb-4">
           <div className="flex items-start gap-3">
             <div className="mt-0.5">
               <button
                 onClick={() => setAssumeHealthy(!assumeHealthy)}
-                className={`w-11 h-6 rounded-full transition-colors relative ${assumeHealthy ? 'bg-sky-pilot' : 'bg-gray-300'}`}
+                className={`w-11 h-6 rounded-full transition-colors relative ${assumeHealthy ? 'bg-sky-pilot' : 'bg-gray-300 dark:bg-gray-600'}`}
               >
                 <span className={`absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${assumeHealthy ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
               </button>
             </div>
             <div>
-              <div className="font-semibold text-sm text-gray-900">Count missed days as clear days</div>
-              <div className="text-xs text-gray-600 mt-1">
+              <div className="font-semibold text-sm text-gray-900 dark:text-white">Count missed days as clear days</div>
+              <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
                 Assumes low symptoms on days you skip. Works best when you only skip on good days.
               </div>
-              <div className="text-xs text-amber-700 mt-1">
+              <div className="text-xs text-amber-700 dark:text-amber-400 mt-1">
                 Tip: logging time spent outside on good days still helps calibrate your tolerance.
               </div>
             </div>
