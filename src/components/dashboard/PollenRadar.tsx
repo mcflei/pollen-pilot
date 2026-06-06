@@ -60,7 +60,9 @@ export function PollenRadar({ data }: Props) {
           <span className="text-xs text-gray-400">
             {data.aqi <= 50 ? 'Good' : data.aqi <= 100 ? 'Moderate' : 'Poor'}
           </span>
-          {aqiDemo && <span className="text-[10px] text-amber-500 font-medium">demo</span>}
+          <span className="text-[10px] text-gray-400">
+            {data.aqi_source === 'airnow' ? 'AirNow' : data.aqi_source === 'google' ? 'Google' : 'demo'}
+          </span>
         </div>
       </div>
     </div>
