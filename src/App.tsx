@@ -7,6 +7,7 @@ import { useDarkMode } from '@/hooks/useDarkMode';
 import { Nav } from '@/components/layout/Nav';
 import { TabBar } from '@/components/layout/TabBar';
 import { AuthScreen } from '@/components/auth/AuthScreen';
+import { ResetPasswordScreen } from '@/components/auth/ResetPasswordScreen';
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import { Dashboard } from '@/components/dashboard/Dashboard';
 import { InsightsPage } from '@/components/insights/InsightsPage';
@@ -38,13 +39,19 @@ export function App() {
 
   // undefined = still checking session | null = not logged in | User = logged in
   const [authUser, setAuthUser] = useState<User | null | undefined>(undefined);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setAuthUser(session?.user ?? null);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+      } else {
+        setIsPasswordRecovery(false);
+      }
       setAuthUser(session?.user ?? null);
     });
 
@@ -64,6 +71,10 @@ export function App() {
         <div className="text-sky-pilot text-sm">Loading…</div>
       </div>
     );
+  }
+
+  if (isPasswordRecovery) {
+    return <ResetPasswordScreen onDone={() => setIsPasswordRecovery(false)} />;
   }
 
   if (!authUser) {

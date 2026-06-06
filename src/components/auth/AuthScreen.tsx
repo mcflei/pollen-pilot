@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-type Mode = 'signin' | 'signup';
+type Mode = 'signin' | 'signup' | 'forgot';
 
 export function AuthScreen() {
   const [mode, setMode] = useState<Mode>('signin');
@@ -10,6 +10,7 @@ export function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkEmail, setCheckEmail] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   async function handleEmailAuth(e: React.FormEvent) {
     e.preventDefault();
@@ -29,6 +30,21 @@ export function AuthScreen() {
     setLoading(false);
   }
 
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    if (resetError) {
+      setError(resetError.message);
+    } else {
+      setResetSent(true);
+    }
+    setLoading(false);
+  }
+
   async function handleGoogle() {
     setLoading(true);
     setError(null);
@@ -40,6 +56,69 @@ export function AuthScreen() {
       setError(authError.message);
       setLoading(false);
     }
+  }
+
+  if (resetSent) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-6">
+        <div className="text-center max-w-xs">
+          <div className="text-5xl mb-4">✉️</div>
+          <h2 className="font-lora text-2xl font-semibold text-gray-900 dark:text-white mb-2">Check your email</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
+            We sent a password reset link to <strong>{email}</strong>. Click it to set a new password.
+          </p>
+          <button
+            onClick={() => { setResetSent(false); setMode('signin'); }}
+            className="mt-6 text-sky-pilot text-sm font-medium"
+          >
+            Back to sign in
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === 'forgot') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-6">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="text-4xl mb-3">✈️</div>
+            <h1 className="font-lora text-3xl font-semibold text-gray-900 dark:text-white">Pollen Pilot</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Reset your password</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <form onSubmit={handleForgotPassword} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                  placeholder="you@example.com"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-pilot focus:border-transparent"
+                />
+              </div>
+              {error && <p className="text-xs text-red-500">{error}</p>}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 bg-sky-pilot text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-opacity"
+              >
+                {loading ? 'Sending…' : 'Send reset link'}
+              </button>
+            </form>
+            <button
+              onClick={() => { setMode('signin'); setError(null); }}
+              className="mt-4 w-full text-center text-sm text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              Back to sign in
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (checkEmail) {
@@ -102,7 +181,18 @@ export function AuthScreen() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Password</label>
+                {mode === 'signin' && (
+                  <button
+                    type="button"
+                    onClick={() => { setMode('forgot'); setError(null); }}
+                    className="text-xs text-sky-pilot hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
               <input
                 type="password"
                 value={password}
