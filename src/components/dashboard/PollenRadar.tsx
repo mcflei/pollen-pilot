@@ -15,7 +15,6 @@ const POLLEN_ITEMS = [
 
 export function PollenRadar({ data }: Props) {
   const pollenDemo = data.source === 'mock';
-  const aqiDemo = data.aqi_source === 'mock';
 
   return (
     <div className="mx-4">
