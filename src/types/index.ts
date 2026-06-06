@@ -58,7 +58,8 @@ export interface PollenSnapshot {
   wind_mph: number;
   precip_intensity: number;
   aqi: number;
-  source: 'tomorrow_io' | 'mock';
+  source: 'google_pollen' | 'mock';
+  aqi_source: 'airnow' | 'google' | 'mock';
 }
 
 export interface ForecastDay {

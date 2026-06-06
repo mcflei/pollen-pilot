@@ -16,9 +16,18 @@ interface Props {
 export function ForecastStrip({ forecast }: Props) {
   if (forecast.length === 0) return null;
 
+  const isDemo = forecast[0]?.snapshot.source === 'mock';
+
   return (
     <div className="mx-4">
-      <h3 className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">3-Day Forecast</h3>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold text-gray-700 text-xs uppercase tracking-wide">3-Day Forecast</h3>
+        {isDemo && (
+          <span className="text-[10px] font-medium text-amber-500 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+            Demo data
+          </span>
+        )}
+      </div>
       <div className="grid grid-cols-3 gap-2">
         {forecast.map(day => {
           const styles = CATEGORY_STYLES[day.category];

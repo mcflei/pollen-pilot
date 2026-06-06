@@ -19,12 +19,15 @@ function skyCondition(humidity: number, precip: number): string {
 }
 
 export function WeatherStrip({ data }: Props) {
+  const aqiDemo = data.aqi_source === 'mock';
+  const weatherDemo = data.source === 'mock';
+
   const items = [
-    { label: 'Temp', value: `${Math.round(data.temperature_f)}°F` },
-    { label: 'Humidity', value: `${Math.round(data.humidity_pct)}%` },
-    { label: 'Wind', value: `${Math.round(data.wind_mph)} mph` },
-    { label: 'AQI', value: `${data.aqi} ${aqiLabel(data.aqi)}` },
-    { label: 'Sky', value: skyCondition(data.humidity_pct, data.precip_intensity) },
+    { label: 'Temp', value: `${Math.round(data.temperature_f)}°F`, demo: weatherDemo },
+    { label: 'Humidity', value: `${Math.round(data.humidity_pct)}%`, demo: weatherDemo },
+    { label: 'Wind', value: `${Math.round(data.wind_mph)} mph`, demo: weatherDemo },
+    { label: 'AQI', value: `${data.aqi} ${aqiLabel(data.aqi)}`, demo: aqiDemo },
+    { label: 'Sky', value: skyCondition(data.humidity_pct, data.precip_intensity), demo: weatherDemo },
   ];
 
   return (
@@ -33,6 +36,7 @@ export function WeatherStrip({ data }: Props) {
         <div key={item.label} className="flex flex-col items-center min-w-[60px]">
           <span className="text-xs text-gray-500">{item.label}</span>
           <span className="text-xs font-semibold text-gray-900 text-center">{item.value}</span>
+          {item.demo && <span className="text-[10px] text-amber-500 font-medium">demo</span>}
         </div>
       ))}
     </div>

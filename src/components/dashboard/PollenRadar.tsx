@@ -14,9 +14,19 @@ const POLLEN_ITEMS = [
 ];
 
 export function PollenRadar({ data }: Props) {
+  const pollenDemo = data.source === 'mock';
+  const aqiDemo = data.aqi_source === 'mock';
+
   return (
     <div className="mx-4">
-      <h3 className="font-semibold text-gray-900 mb-3">Pollen radar</h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-gray-900">Pollen radar</h3>
+        {pollenDemo && (
+          <span className="text-[10px] font-medium text-amber-500 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+            Demo data
+          </span>
+        )}
+      </div>
       <div className="grid grid-cols-3 gap-2">
         {POLLEN_ITEMS.map(({ key, label }) => {
           const index = data[key];
@@ -50,6 +60,7 @@ export function PollenRadar({ data }: Props) {
           <span className="text-xs text-gray-400">
             {data.aqi <= 50 ? 'Good' : data.aqi <= 100 ? 'Moderate' : 'Poor'}
           </span>
+          {aqiDemo && <span className="text-[10px] text-amber-500 font-medium">demo</span>}
         </div>
       </div>
     </div>

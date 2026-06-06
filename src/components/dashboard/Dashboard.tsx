@@ -4,6 +4,7 @@ import { useRiskScore } from '@/hooks/useRiskScore';
 import { usePollenData } from '@/hooks/usePollenData';
 import { useCheckIns } from '@/hooks/useCheckIns';
 import { useInsights } from '@/hooks/useInsights';
+import { reverseGeocode } from '@/lib/pollenApi';
 import { RiskRing } from './RiskRing';
 import { WeatherStrip } from './WeatherStrip';
 import { PollenRadar } from './PollenRadar';
@@ -35,10 +36,29 @@ export function Dashboard() {
   const profile = useAppStore(s => s.profile);
   const illnessFlagged = useAppStore(s => s.lastCheckInIllnessFlagged);
   const overrideIllness = useAppStore(s => s.overrideIllness);
+  const updateProfile = useAppStore(s => s.updateProfile);
+  const refreshPollenData = useAppStore(s => s.refreshPollenData);
   const [showCheckIn, setShowCheckIn] = useState(false);
   const [showEditCheckIn, setShowEditCheckIn] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [showGame, setShowGame] = useState(false);
+  const [locStatus, setLocStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+
+  async function handleRequestLocation() {
+    if (!navigator.geolocation) return;
+    setLocStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      async pos => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        const city = await reverseGeocode(lat, lng);
+        updateProfile({ location: { lat, lng, city } });
+        await refreshPollenData();
+        setLocStatus('idle');
+      },
+      () => setLocStatus('error'),
+      { timeout: 10000 },
+    );
+  }
 
   const predictedSymptoms = riskScore?.predicted_symptoms ?? [];
   const streak = insights.streak_days;
@@ -56,6 +76,33 @@ export function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Location permission banner — shown every session until location is set */}
+      {!profile?.location && (
+        <div className="mx-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4 flex items-start gap-3">
+          <span className="text-xl mt-0.5">📍</span>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-amber-800 dark:text-amber-300 text-sm">Location needed for accurate data</div>
+            <div className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+              Without your location, we're using demo data. Your pollen and AQI readings won't reflect your actual area.
+            </div>
+            {locStatus === 'error' && (
+              <div className="text-xs text-red-500 mt-1">Permission denied — enable location in your browser settings, then try again.</div>
+            )}
+            <button
+              onClick={handleRequestLocation}
+              disabled={locStatus === 'loading'}
+              className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700 active:scale-[0.98] transition-all disabled:opacity-60"
+            >
+              {locStatus === 'loading' ? (
+                <><span className="animate-spin inline-block">⟳</span> Detecting…</>
+              ) : (
+                <><span>📡</span> Use my location</>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
 
       {riskScore && (
         <RiskRing

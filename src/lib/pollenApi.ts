@@ -114,6 +114,63 @@ async function fetchGoogleAQI(lat: number, lng: number): Promise<number | null> 
   return epa?.aqi ?? uaqi?.aqi ?? null;
 }
 
+// ── AirNow API (US EPA AQI — ground station data) ───────────────────────────
+
+interface AirNowObservation {
+  ParameterName: string;
+  AQI: number;
+  Category: { Number: number; Name: string };
+}
+
+interface AirNowForecastEntry {
+  DateForecast: string;
+  ParameterName: string;
+  AQI: number;
+}
+
+async function fetchAirNowAQI(lat: number, lng: number): Promise<number | null> {
+  const apiKey = import.meta.env.VITE_AIRNOW_API_KEY as string | undefined;
+  if (!apiKey) return null;
+
+  try {
+    const url =
+      `https://www.airnowapi.org/aq/observation/latLong/current/` +
+      `?format=application/json&latitude=${lat}&longitude=${lng}&distance=25&API_KEY=${apiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json() as AirNowObservation[];
+    const valid = data.filter(d => d.AQI >= 0);
+    if (!valid.length) return null;
+    return Math.max(...valid.map(d => d.AQI));
+  } catch {
+    return null;
+  }
+}
+
+async function fetchAirNowForecastAQI(lat: number, lng: number): Promise<Record<string, number>> {
+  const apiKey = import.meta.env.VITE_AIRNOW_API_KEY as string | undefined;
+  if (!apiKey) return {};
+
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const url =
+      `https://www.airnowapi.org/aq/forecast/latLong/` +
+      `?format=application/json&latitude=${lat}&longitude=${lng}&date=${today}&distance=25&API_KEY=${apiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) return {};
+    const data = await res.json() as AirNowForecastEntry[];
+    const byDate: Record<string, number> = {};
+    for (const entry of data) {
+      if (entry.AQI < 0) continue;
+      const date = entry.DateForecast.trim();
+      byDate[date] = Math.max(byDate[date] ?? 0, entry.AQI);
+    }
+    return byDate;
+  } catch {
+    return {};
+  }
+}
+
 // ── Mold estimate from humidity ──────────────────────────────────────────────
 // No free public API for mold spore counts; humidity is the strongest predictor.
 function estimateMold(humidity: number): number {
@@ -181,6 +238,7 @@ export function getMockPollenData(date: string): PollenSnapshot {
     precip_intensity: 0,
     aqi: isSpring ? 52 : isSummer ? 65 : 38,
     source: 'mock',
+    aqi_source: 'mock',
   };
 }
 
@@ -197,9 +255,10 @@ export async function getPollenData(
   }
 
   try {
-    const [weather, pollen, aqi] = await Promise.all([
+    const [weather, pollen, airNowAqi, googleAqi] = await Promise.all([
       fetchWeather(lat, lng),
       fetchGooglePollen(lat, lng),
+      fetchAirNowAQI(lat, lng),
       fetchGoogleAQI(lat, lng),
     ]);
 
@@ -218,8 +277,9 @@ export async function getPollenData(
       humidity_pct: weather.humidity_pct,
       wind_mph: weather.wind_mph,
       precip_intensity: weather.precip_intensity,
-      aqi: aqi ?? mock.aqi,
-      source: pollen ? 'tomorrow_io' : 'mock',
+      aqi: airNowAqi ?? googleAqi ?? mock.aqi,
+      source: pollen ? 'google_pollen' : 'mock',
+      aqi_source: airNowAqi !== null ? 'airnow' : googleAqi !== null ? 'google' : 'mock',
     };
 
     savePollenCache({ data: snapshot, fetched_at: new Date().toISOString() });
@@ -255,6 +315,9 @@ export async function getPollenForecast(
 ): Promise<ForecastDay[]> {
   const googleKey = import.meta.env.VITE_GOOGLE_API_KEY as string | undefined;
   const tomorrowKey = import.meta.env.VITE_TOMORROW_IO_API_KEY as string | undefined;
+
+  // Kick off AirNow forecast fetch in parallel with pollen/weather
+  const aqiForecastPromise = fetchAirNowForecastAQI(lat, lng);
 
   // Fetch 3-day pollen from Google
   let pollenDays: { date: string; tree: number; grass: number; weed: number }[] = [];
@@ -306,6 +369,8 @@ export async function getPollenForecast(
     } catch { /* fall through */ }
   }
 
+  const aqiForecast = await aqiForecastPromise;
+
   const today = new Date();
   return [1, 2, 3, 4, 5].map(offset => {
     const d = new Date(today.getTime() + offset * 24 * 60 * 60 * 1000);
@@ -325,8 +390,9 @@ export async function getPollenForecast(
       humidity_pct: weather?.humidity_pct ?? 55,
       wind_mph: weather?.wind_mph ?? 7,
       precip_intensity: weather?.precip_intensity ?? 0,
-      aqi: 40,
-      source: pollen ? 'tomorrow_io' : 'mock',
+      aqi: aqiForecast[dateStr] ?? 40,
+      source: pollen ? 'google_pollen' : 'mock',
+      aqi_source: aqiForecast[dateStr] !== undefined ? 'airnow' : 'mock',
     };
 
     const score = pollenOnlyForecastScore(snapshot);
