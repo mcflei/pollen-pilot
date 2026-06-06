@@ -18,9 +18,18 @@ export function BestDaysView({ forecast }: Props) {
 
   const sorted = [...forecast].sort((a, b) => a.score - b.score);
 
+  const isDemo = forecast[0]?.snapshot.source === 'mock';
+
   return (
     <div className="mx-4">
-      <h3 className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-2">Best Days This Week</h3>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold text-gray-700 text-xs uppercase tracking-wide">Best Days This Week</h3>
+        {isDemo && (
+          <span className="text-[10px] font-medium text-amber-500 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+            Demo data
+          </span>
+        )}
+      </div>
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         {sorted.map((day, rank) => {
           const d = new Date(day.date + 'T12:00:00');

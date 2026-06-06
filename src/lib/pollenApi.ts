@@ -324,7 +324,7 @@ export async function getPollenForecast(
   if (googleKey) {
     try {
       const res = await fetch(
-        `https://pollen.googleapis.com/v1/forecast:lookup?key=${googleKey}&location.longitude=${lng}&location.latitude=${lat}&days=6`
+        `https://pollen.googleapis.com/v1/forecast:lookup?key=${googleKey}&location.longitude=${lng}&location.latitude=${lat}&days=5`
       );
       if (res.ok) {
         const data = await res.json() as {
