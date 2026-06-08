@@ -239,6 +239,7 @@ export function getMockPollenData(date: string): PollenSnapshot {
     aqi: isSpring ? 52 : isSummer ? 65 : 38,
     source: 'mock',
     aqi_source: 'mock',
+    weather_source: 'mock',
   };
 }
 
@@ -280,6 +281,7 @@ export async function getPollenData(
       aqi: airNowAqi ?? googleAqi ?? mock.aqi,
       source: pollen ? 'google_pollen' : 'mock',
       aqi_source: airNowAqi !== null ? 'airnow' : googleAqi !== null ? 'google' : 'mock',
+      weather_source: (import.meta.env.VITE_TOMORROW_IO_API_KEY as string | undefined) ? 'tomorrow_io' : 'mock',
     };
 
     savePollenCache({ data: snapshot, fetched_at: new Date().toISOString() });
@@ -393,6 +395,7 @@ export async function getPollenForecast(
       aqi: aqiForecast[dateStr] ?? 40,
       source: pollen ? 'google_pollen' : 'mock',
       aqi_source: aqiForecast[dateStr] !== undefined ? 'airnow' : 'mock',
+      weather_source: weatherDays[offset - 1] ? 'tomorrow_io' : 'mock',
     };
 
     const score = pollenOnlyForecastScore(snapshot);

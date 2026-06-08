@@ -60,6 +60,7 @@ export interface PollenSnapshot {
   aqi: number;
   source: 'google_pollen' | 'mock';
   aqi_source: 'airnow' | 'google' | 'mock';
+  weather_source: 'tomorrow_io' | 'mock';
 }
 
 export interface ForecastDay {
