@@ -42,7 +42,13 @@ function modelAccuracyTier(logLoss: number): {
   };
 }
 
-function ModelAccuracyCard({ logLoss }: { logLoss: number }) {
+const MODEL_DISPLAY: Record<string, string> = {
+  'logistic regression': 'Logistic Regression',
+  'gradient boosted tree': 'Gradient Boosted Tree',
+  'weighted knn': 'Weighted KNN',
+};
+
+function ModelAccuracyCard({ logLoss, model }: { logLoss: number; model: string }) {
   const hasEval = logLoss < 1;
   const tier = modelAccuracyTier(logLoss);
   // Progress: 0% = baseline (random), 100% = perfect
@@ -80,8 +86,10 @@ function ModelAccuracyCard({ logLoss }: { logLoss: number }) {
           {/* Description */}
           <p className="text-xs text-gray-500 leading-relaxed mt-2">{tier.description}</p>
 
-          {/* Raw log-loss for transparency */}
-          <p className="text-[10px] text-gray-300 mt-2">log-loss: {logLoss.toFixed(3)}</p>
+          {/* Model name + raw log-loss */}
+          <p className="text-[10px] text-gray-300 mt-2">
+            Leading model: {MODEL_DISPLAY[model] ?? model} · log-loss: {logLoss.toFixed(3)}
+          </p>
         </>
       ) : (
         <p className="text-xs text-gray-500">
@@ -200,7 +208,7 @@ export function InsightsPage() {
 
       {/* Prediction accuracy — only shown once ML models are active */}
       {insights.leading_model !== 'pollen_index' && (
-        <ModelAccuracyCard logLoss={insights.leading_model_log_loss} />
+        <ModelAccuracyCard logLoss={insights.leading_model_log_loss} model={insights.leading_model} />
       )}
     </div>
   );
