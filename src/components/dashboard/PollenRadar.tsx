@@ -6,28 +6,22 @@ interface Props {
 }
 
 const POLLEN_ITEMS = [
-  { key: 'grass_index' as const, label: 'Grass' },
-  { key: 'tree_index' as const, label: 'Tree' },
-  { key: 'weed_index' as const, label: 'Weed' },
-  { key: 'mold_index' as const, label: 'Mold' },
-  { key: 'ragweed_index' as const, label: 'Ragweed' },
+  { key: 'grass_index' as const, label: 'Grass', isMold: false },
+  { key: 'tree_index' as const, label: 'Tree', isMold: false },
+  { key: 'weed_index' as const, label: 'Weed', isMold: false },
+  { key: 'mold_index' as const, label: 'Mold', isMold: true },
+  { key: 'ragweed_index' as const, label: 'Ragweed', isMold: false },
 ];
 
 export function PollenRadar({ data }: Props) {
-  const pollenDemo = data.source === 'mock';
+  const pollenSource = data.source === 'google_pollen' ? 'Google' : 'Demo';
+  const aqiSource = data.aqi_source === 'airnow' ? 'AirNow' : data.aqi_source === 'google' ? 'Google' : 'Demo';
 
   return (
     <div className="mx-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-gray-900">Pollen radar</h3>
-        {pollenDemo && (
-          <span className="text-[10px] font-medium text-amber-500 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
-            Demo data
-          </span>
-        )}
-      </div>
+      <h3 className="font-semibold text-gray-900 mb-3">Pollen radar</h3>
       <div className="grid grid-cols-3 gap-2">
-        {POLLEN_ITEMS.map(({ key, label }) => {
+        {POLLEN_ITEMS.map(({ key, label, isMold }) => {
           const index = data[key];
           return (
             <div key={key} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex flex-col items-center gap-1">
@@ -44,6 +38,7 @@ export function PollenRadar({ data }: Props) {
                   />
                 ))}
               </div>
+              <span className="text-[10px] text-gray-400">{isMold ? 'Est.' : pollenSource}</span>
             </div>
           );
         })}
@@ -59,9 +54,7 @@ export function PollenRadar({ data }: Props) {
           <span className="text-xs text-gray-400">
             {data.aqi <= 50 ? 'Good' : data.aqi <= 100 ? 'Moderate' : 'Poor'}
           </span>
-          <span className="text-[10px] text-gray-400">
-            {data.aqi_source === 'airnow' ? 'AirNow' : data.aqi_source === 'google' ? 'Google' : 'demo'}
-          </span>
+          <span className="text-[10px] text-gray-400">{aqiSource}</span>
         </div>
       </div>
     </div>
