@@ -8,6 +8,90 @@ import { CalendarHeatmap } from './CalendarHeatmap';
 import { MedicationEffectivenessSection } from './MedicationEffectivenessSection';
 import { AchievementsSection } from './AchievementsSection';
 
+const BASELINE_LOSS = 0.693; // log-loss of a random 50/50 model
+
+function modelAccuracyTier(logLoss: number): {
+  label: string;
+  description: string;
+  barColor: string;
+  badgeColor: string;
+} {
+  if (logLoss > BASELINE_LOSS) return {
+    label: 'Needs more data',
+    description: 'Not enough check-ins yet to beat a random guess. Keep logging daily — it improves quickly.',
+    barColor: 'bg-red-400',
+    badgeColor: 'bg-red-100 text-red-700',
+  };
+  if (logLoss > 0.5) return {
+    label: 'Learning',
+    description: 'Your model is better than random and actively learning your patterns. Accuracy will improve with each check-in.',
+    barColor: 'bg-amber-400',
+    badgeColor: 'bg-amber-100 text-amber-700',
+  };
+  if (logLoss > 0.3) return {
+    label: 'Good',
+    description: 'Your model has a solid understanding of your allergy patterns and is making meaningfully accurate predictions.',
+    barColor: 'bg-blue-400',
+    badgeColor: 'bg-blue-100 text-blue-700',
+  };
+  return {
+    label: 'Excellent',
+    description: 'Your model is well-calibrated to your personal patterns. Predictions are highly reliable.',
+    barColor: 'bg-green-400',
+    badgeColor: 'bg-green-100 text-green-700',
+  };
+}
+
+function ModelAccuracyCard({ logLoss }: { logLoss: number }) {
+  const hasEval = logLoss < 1;
+  const tier = modelAccuracyTier(logLoss);
+  // Progress: 0% = baseline (random), 100% = perfect
+  const progress = hasEval
+    ? Math.round(Math.max(0, Math.min(100, (1 - logLoss / BASELINE_LOSS) * 100)))
+    : 0;
+
+  return (
+    <div className="mx-4 bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-gray-800 text-sm">Prediction accuracy</h3>
+        {hasEval && (
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${tier.badgeColor}`}>
+            {tier.label}
+          </span>
+        )}
+      </div>
+
+      {hasEval ? (
+        <>
+          {/* Progress bar */}
+          <div className="mb-1">
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${tier.barColor}`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[10px] text-gray-400">Random guess</span>
+              <span className="text-[10px] text-gray-400">Perfect</span>
+            </div>
+          </div>
+
+          {/* Description */}
+          <p className="text-xs text-gray-500 leading-relaxed mt-2">{tier.description}</p>
+
+          {/* Raw log-loss for transparency */}
+          <p className="text-[10px] text-gray-300 mt-2">log-loss: {logLoss.toFixed(3)}</p>
+        </>
+      ) : (
+        <p className="text-xs text-gray-500">
+          Accuracy will appear here after your first model self-evaluation — typically after 12+ check-ins.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function InsightsPage() {
   const insights = useInsights();
   const { checkIns, manualCheckIns } = useCheckIns();
@@ -114,21 +198,9 @@ export function InsightsPage() {
         <AchievementsSection />
       </div>
 
-      {/* Model info — only shown once ML models are active */}
+      {/* Prediction accuracy — only shown once ML models are active */}
       {insights.leading_model !== 'pollen_index' && (
-        <div className="mx-4 bg-gray-50 rounded-xl p-4">
-          <h3 className="font-semibold text-gray-800 text-sm mb-1">Model status</h3>
-          <div className="text-xs text-gray-500">
-            Leading model:{' '}
-            <span className="font-medium text-gray-700 capitalize">{insights.leading_model}</span>
-          </div>
-          {insights.leading_model_log_loss < 1 && (
-            <div className="text-xs text-gray-500">
-              Prediction accuracy (log-loss):{' '}
-              <span className="font-medium text-gray-700">{insights.leading_model_log_loss.toFixed(3)}</span>
-            </div>
-          )}
-        </div>
+        <ModelAccuracyCard logLoss={insights.leading_model_log_loss} />
       )}
     </div>
   );
