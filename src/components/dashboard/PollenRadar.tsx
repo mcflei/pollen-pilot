@@ -14,8 +14,11 @@ const POLLEN_ITEMS = [
 ];
 
 export function PollenRadar({ data }: Props) {
-  const pollenSource = data.source === 'google_pollen' ? 'Google' : 'Demo';
-  const aqiSource = data.aqi_source === 'airnow' ? 'AirNow' : data.aqi_source === 'google' ? 'Google' : 'Demo';
+  const pollenSource = data.source === 'mock' ? 'Demo' : 'Google';
+  const aqiSource = data.aqi_source === 'airnow' ? 'AirNow'
+    : data.aqi_source === 'google' ? 'Google'
+    : data.source !== 'mock' ? 'Google'
+    : 'Demo';
 
   return (
     <div className="mx-4">
