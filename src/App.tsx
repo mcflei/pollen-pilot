@@ -49,9 +49,9 @@ export function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsPasswordRecovery(true);
-      } else {
-        setIsPasswordRecovery(false);
       }
+      // Don't clear isPasswordRecovery on other events (e.g. SIGNED_IN fires right after
+      // PASSWORD_RECOVERY) — only clear it when the user completes the reset via onDone.
       setAuthUser(session?.user ?? null);
     });
 

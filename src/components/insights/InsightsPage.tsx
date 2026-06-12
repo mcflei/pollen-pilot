@@ -206,10 +206,8 @@ export function InsightsPage() {
         <AchievementsSection />
       </div>
 
-      {/* Prediction accuracy — only shown once ML models are active */}
-      {insights.leading_model !== 'pollen_index' && (
-        <ModelAccuracyCard logLoss={insights.leading_model_log_loss} model={insights.leading_model} />
-      )}
+      {/* Prediction accuracy */}
+      <ModelAccuracyCard logLoss={insights.leading_model_log_loss} model={insights.leading_model} />
     </div>
   );
 }
