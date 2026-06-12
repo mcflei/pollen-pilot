@@ -26,7 +26,7 @@ import {
 } from '@/lib/storage';
 
 const MIN_CHECKINS_FOR_MODEL = 7;
-const EVAL_HOLDOUT = 5;
+const EVAL_HOLDOUT = 2;
 const SYMPTOM_ITERATIONS = 200;
 
 const SYMPTOMS: SymptomKey[] = [

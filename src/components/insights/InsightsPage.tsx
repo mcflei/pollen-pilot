@@ -93,7 +93,7 @@ function ModelAccuracyCard({ logLoss, model }: { logLoss: number; model: string 
         </>
       ) : (
         <p className="text-xs text-gray-500">
-          Accuracy will appear here after your first model self-evaluation — typically after 12+ check-ins.
+          Accuracy will appear here after your first model self-evaluation — typically after 7+ check-ins.
         </p>
       )}
     </div>
